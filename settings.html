@@ -10,20 +10,20 @@
     @keyframes spin    { to{transform:rotate(360deg);} }
     @keyframes blink   { 0%,100%{opacity:1;} 50%{opacity:.2;} }
 
-    html,body { height:100%; margin:0; font-family:'Segoe UI','Noto Sans Thai',sans-serif; background:#0f172a; }
+    html,body { height:100%; margin:0; font-family:'Segoe UI','Noto Sans Thai',sans-serif; background:#cce8f9; }
 
     .page-enter { animation:fadeIn .35s ease-out both; }
 
     /* Input fields */
     .db-input {
-      width:100%; background:rgba(255,255,255,0.07);
-      border:1.5px solid rgba(255,255,255,0.14);
+      width:100%; background:rgba(255,255,255,0.75);
+      border:1.5px solid rgba(100,170,220,0.45);
       border-radius:12px; padding:12px 14px;
-      color:#f1f5f9; font-size:0.95rem;
+      color:#0f2d4a; font-size:0.95rem;
       outline:none; transition:all .2s;
     }
-    .db-input:focus  { border-color:#6366f1; background:rgba(99,102,241,0.1); box-shadow:0 0 0 3px rgba(99,102,241,0.2); }
-    .db-input::placeholder { color:#475569; }
+    .db-input:focus  { border-color:#3b82f6; background:#fff; box-shadow:0 0 0 3px rgba(59,130,246,0.2); }
+    .db-input::placeholder { color:#7fb3d0; }
 
     /* DB type tabs */
     .db-tab {
@@ -59,7 +59,7 @@
     .btn-save:active { transform:translateY(0); }
 
     /* Input label */
-    .field-label { display:block; color:#94a3b8; font-size:.8rem; font-weight:600;
+    .field-label { display:block; color:#3a6f9a; font-size:.8rem; font-weight:600;
                    text-transform:uppercase; letter-spacing:.07em; margin-bottom:6px; }
 
     /* Password toggle */
@@ -67,10 +67,10 @@
     .pw-wrap .db-input { padding-right:44px; }
     .pw-toggle {
       position:absolute; right:12px; top:50%; transform:translateY(-50%);
-      color:#64748b; cursor:pointer; font-size:1.1rem; user-select:none;
+      color:#7fb3d0; cursor:pointer; font-size:1.1rem; user-select:none;
       transition:color .15s;
     }
-    .pw-toggle:hover { color:#94a3b8; }
+    .pw-toggle:hover { color:#3a6f9a; }
 
     /* Test result badge */
     .test-result {
@@ -90,8 +90,9 @@
 
     /* Section card */
     .section-card {
-      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);
+      background:rgba(255,255,255,0.6); border:1px solid rgba(100,170,220,0.35);
       border-radius:18px; padding:24px;
+      box-shadow:0 2px 12px rgba(30,90,150,0.08);
     }
 
     /* Profile row */
@@ -130,20 +131,21 @@
   </style>
 </head>
 
-<body class="text-white min-h-screen">
+<body class="min-h-screen" style="color:#1e3a5f">
 
   <!-- ── Header ────────────────────────────────────────── -->
-  <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur border-b border-white/10 px-6 py-3">
+  <header class="sticky top-0 z-30 backdrop-blur border-b px-6 py-3"
+          style="background:rgba(180,220,245,0.92);border-color:rgba(100,170,220,0.4)">
     <div class="max-w-2xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-3">
         <button onclick="location.href='index.html'"
-                class="w-9 h-9 rounded-xl bg-white/8 hover:bg-white/15 flex items-center
-                       justify-center text-gray-400 hover:text-white transition-all font-bold text-lg">
+                class="w-9 h-9 rounded-xl flex items-center justify-center transition-all font-bold text-lg"
+                style="background:rgba(100,170,220,0.25);color:#1e3a5f;">
           ←
         </button>
         <div>
-          <div class="font-bold text-base leading-tight">ตั้งค่าการเชื่อมต่อฐานข้อมูล</div>
-          <div class="text-xs text-slate-400">Database Connection Settings</div>
+          <div class="font-bold text-base leading-tight" style="color:#0f2d4a">ตั้งค่าการเชื่อมต่อฐานข้อมูล</div>
+          <div class="text-xs" style="color:#4a7fa5">Database Connection Settings</div>
         </div>
       </div>
       <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-base select-none"

@@ -240,6 +240,43 @@ app.get('/api/er-leave-summary', async (req, res) => {
   }
 });
 
+/* ── GET /api/check-leave-field — ตรวจสอบว่ามีฟิล leave ใน er_leave_status ── */
+app.get('/api/check-leave-field', async (req, res) => {
+  const cfg = loadConfig();
+  if (!cfg) return res.status(503).json({ ok: false, error: 'ยังไม่ได้ตั้งค่าฐานข้อมูล' });
+
+  const isMySQL = cfg.dbType === 'mysql';
+  const sql = isMySQL
+    ? `SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'er_leave_status' AND COLUMN_NAME = 'leave'`
+    : `SELECT COUNT(*) AS cnt FROM information_schema.columns
+       WHERE table_schema = current_schema() AND table_name = 'er_leave_status' AND column_name = 'leave'`;
+
+  try {
+    const rows = await runQuery(cfg, sql);
+    const cnt = parseInt(rows[0]?.cnt ?? rows[0]?.count ?? 0);
+    res.json({ ok: true, exists: cnt > 0 });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/* ── POST /api/add-leave-field — เพิ่มฟิล leave CHAR(1) ใน er_leave_status ── */
+app.post('/api/add-leave-field', async (req, res) => {
+  const cfg = loadConfig();
+  if (!cfg) return res.status(503).json({ ok: false, error: 'ยังไม่ได้ตั้งค่าฐานข้อมูล' });
+
+  const sql = `ALTER TABLE er_leave_status ADD COLUMN leave CHAR(1) DEFAULT NULL`;
+  try {
+    await runQuery(cfg, sql);
+    console.log('[AddField] เพิ่มฟิล leave ใน er_leave_status สำเร็จ');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[AddField] ERROR —', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 /* ══════════════════════════════════════════════
    START
 ══════════════════════════════════════════════ */

@@ -193,6 +193,39 @@
     <!-- Test Result (hidden by default) -->
     <div id="testResult" class="hidden mb-4"></div>
 
+    <!-- DB Tools Section -->
+    <div class="section-card mb-5">
+      <div class="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+        <span class="text-lg">🔧</span> เครื่องมือฐานข้อมูล
+      </div>
+
+      <!-- leave field checker -->
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <div class="font-semibold text-sm text-slate-200">ฟิล <code style="background:rgba(255,255,255,.1);padding:2px 7px;border-radius:6px;font-size:.85em">leave</code> ในตาราง <code style="background:rgba(255,255,255,.1);padding:2px 7px;border-radius:6px;font-size:.85em">er_leave_status</code></div>
+          <div class="text-xs text-slate-400 mt-1" id="leaveFieldDesc">กรุณากรอกข้อมูลการเชื่อมต่อและทดสอบก่อน</div>
+        </div>
+        <button id="btnAddField" onclick="addLeaveField()" disabled
+                style="min-width:130px; padding:10px 18px; border-radius:12px;
+                       font-weight:700; font-size:.88rem; cursor:not-allowed;
+                       border:2px solid #475569; background:rgba(71,85,105,0.2); color:#64748b;
+                       display:flex; align-items:center; justify-content:center; gap:7px;
+                       transition:all .2s; flex-shrink:0;">
+          <span id="addFieldIcon">➕</span>
+          <span id="addFieldLabel">เพิ่มฟิล</span>
+        </button>
+      </div>
+
+      <!-- check button -->
+      <button id="btnCheckField" onclick="checkLeaveField()"
+              style="margin-top:14px; width:100%; padding:10px; border-radius:11px;
+                     background:rgba(99,102,241,0.12); border:1.5px solid rgba(99,102,241,0.35);
+                     color:#a5b4fc; font-weight:600; font-size:.88rem; cursor:pointer;
+                     display:flex; align-items:center; justify-content:center; gap:8px; transition:all .2s;">
+        <span>🔎</span> ตรวจสอบฟิล leave
+      </button>
+    </div>
+
     <!-- Action Buttons -->
     <div class="flex flex-col sm:flex-row gap-3">
 
@@ -378,6 +411,74 @@
 
     function clearTestResult() {
       document.getElementById('testResult').classList.add('hidden');
+    }
+
+    /* ── Check leave field ── */
+    async function checkLeaveField() {
+      const btn  = document.getElementById('btnCheckField');
+      const desc = document.getElementById('leaveFieldDesc');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> กำลังตรวจสอบ...';
+      desc.textContent = 'กำลังตรวจสอบ...';
+
+      try {
+        const resp = await fetch(`${API_BASE}/api/check-leave-field`);
+        const json = await resp.json();
+        if (!json.ok) throw new Error(json.error || 'ตรวจสอบไม่ได้');
+        setLeaveFieldState(json.exists);
+      } catch (e) {
+        desc.textContent = '⚠ ' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🔎</span> ตรวจสอบฟิล leave';
+      }
+    }
+
+    function setLeaveFieldState(exists) {
+      const addBtn = document.getElementById('btnAddField');
+      const desc   = document.getElementById('leaveFieldDesc');
+      if (exists) {
+        desc.textContent = '✅ มีฟิล leave แล้ว — ระบบพร้อมใช้งาน';
+        desc.style.color = '#4ade80';
+        addBtn.disabled = true;
+        addBtn.style.cursor        = 'not-allowed';
+        addBtn.style.borderColor   = '#475569';
+        addBtn.style.background    = 'rgba(71,85,105,0.2)';
+        addBtn.style.color         = '#64748b';
+        document.getElementById('addFieldIcon').textContent  = '✅';
+        document.getElementById('addFieldLabel').textContent = 'มีแล้ว';
+      } else {
+        desc.textContent = '⚠ ยังไม่มีฟิล leave — กดปุ่มเพื่อเพิ่ม';
+        desc.style.color = '#fb923c';
+        addBtn.disabled = false;
+        addBtn.style.cursor        = 'pointer';
+        addBtn.style.borderColor   = '#ea580c';
+        addBtn.style.background    = 'rgba(234,88,12,0.2)';
+        addBtn.style.color         = '#fb923c';
+        document.getElementById('addFieldIcon').textContent  = '➕';
+        document.getElementById('addFieldLabel').textContent = 'เพิ่มฟิล';
+      }
+    }
+
+    /* ── Add leave field ── */
+    async function addLeaveField() {
+      const addBtn = document.getElementById('btnAddField');
+      const desc   = document.getElementById('leaveFieldDesc');
+      addBtn.disabled = true;
+      addBtn.innerHTML = '<span class="spinner"></span> กำลังเพิ่ม...';
+
+      try {
+        const resp = await fetch(`${API_BASE}/api/add-leave-field`, { method: 'POST' });
+        const json = await resp.json();
+        if (!json.ok) throw new Error(json.error || 'เพิ่มไม่สำเร็จ');
+        setLeaveFieldState(true);
+        showTestResult('ok', '✅ เพิ่มฟิล leave ใน er_leave_status สำเร็จ');
+      } catch (e) {
+        desc.textContent = '❌ ' + e.message;
+        desc.style.color = '#f87171';
+        addBtn.disabled = false;
+        addBtn.innerHTML = '<span>➕</span><span>เพิ่มฟิล</span>';
+      }
     }
   </script>
 </body>

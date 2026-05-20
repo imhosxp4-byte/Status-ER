@@ -1,0 +1,8 @@
+{
+  "dbType": "mysql",
+  "host": "192.168.1.1",
+  "port": "3306",
+  "database": "hosxp_db",
+  "username": "root",
+  "password": ""
+}

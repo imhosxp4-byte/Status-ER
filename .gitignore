@@ -1,0 +1,5 @@
+node_modules/
+config.json
+user-defaults.json
+server.log
+*.log

@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ER Status Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style id="staticStyles">
+    @keyframes pulseRed  { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.7);}  50%{box-shadow:0 0 0 14px rgba(220,38,38,0);}  }
+    @keyframes pulsePink { 0%,100%{box-shadow:0 0 0 0 rgba(219,39,119,.6);} 50%{box-shadow:0 0 0 12px rgba(219,39,119,0);} }
+    @keyframes blink     { 0%,100%{opacity:1;} 50%{opacity:.2;} }
+    @keyframes spin      { to{transform:rotate(360deg);} }
+    @keyframes slideUp   { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
+
+    .anim-l1  { animation: pulseRed  1.6s ease-in-out infinite; }
+    .anim-l2  { animation: pulsePink 2.4s ease-in-out infinite; }
+    .blink    { animation: blink 1.2s ease-in-out infinite; }
+    .slide-up { animation: slideUp .22s ease-out both; }
+
+    html { height:100%; }
+    body {
+      margin:0; height:100%;
+      font-family:'Segoe UI','Noto Sans Thai',sans-serif;
+      display:flex; flex-direction:column; overflow:hidden;
+    }
+    header             { flex-shrink:0; }
+    #summaryCards      { flex-shrink:0; }
+    #subHeader         { flex-shrink:0; }
+    #leaveSummaryWrap  { flex-shrink:0; }
+    #tableWrap         { flex:1; overflow:hidden; min-height:0; }
+
+    /* ── TABLE ── */
+    #erTable { width:100%; border-collapse:separate; border-spacing:0 5px; table-layout:fixed; }
+    body.tv-mode #erTable { table-layout:auto; } /* TV mode: no name col → let browser redistribute */
+    #erTable thead th {
+      position:sticky; top:0; z-index:10;
+      padding:13px 16px;
+      font-weight:900; letter-spacing:.06em;
+      white-space:nowrap;
+      border-bottom: 3px solid rgba(255,255,255,.15);
+    }
+    #erTable thead th .th-icon {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:28px; height:28px; border-radius:8px; margin-right:7px;
+      background:rgba(255,255,255,.15); font-size:1rem; vertical-align:middle;
+    }
+    #erTable thead th .th-text {
+      vertical-align:middle; letter-spacing:.05em;
+    }
+    #erTable tbody td {
+      padding:16px 16px;
+      vertical-align:middle;
+    }
+    /* border-bottom / hover / .wt-* → dynStyles (theme-aware) */
+
+    /* ── TV mode ── */
+    body.tv-mode .staff-only { display:none !important; }
+
+    /* ── Settings panel ── */
+    #settingsPanel { transition:transform .3s cubic-bezier(.4,0,.2,1); }
+    #overlay       { transition:opacity .3s ease; opacity:0; pointer-events:none; }
+    #overlay.open  { opacity:1; pointer-events:auto; }
+
+    input[type=color] {
+      -webkit-appearance:none; appearance:none;
+      border:none; padding:0; cursor:pointer;
+      width:36px; height:36px; border-radius:8px; overflow:hidden;
+    }
+    input[type=color]::-webkit-color-swatch-wrapper { padding:0; }
+    input[type=color]::-webkit-color-swatch         { border:none; }
+
+    .ropt {
+      padding:6px 4px; font-size:.75rem; font-weight:600;
+      border-radius:8px; border:1.5px solid #e2e8f0;
+      color:#64748b; background:#fff; cursor:pointer;
+      transition:all .15s; text-align:center;
+    }
+    .ropt:hover  { border-color:#93c5fd; color:#1d4ed8; }
+    .ropt.active { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+
+    /* font adjust buttons */
+    .fnt-btn {
+      width:32px; height:32px; border-radius:8px;
+      background:#f1f5f9; border:1px solid #e2e8f0;
+      color:#374151; font-size:1.1rem; font-weight:900;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:all .15s; user-select:none;
+    }
+    .fnt-btn:hover { background:#e2e8f0; }
+    .fnt-btn:active { transform:scale(.93); }
+
+    .mono { font-family:'Courier New','Consolas',monospace; }
+
+    /* ── Zone summary cards — shared base ── */
+    .sum-l1,.sum-l2,.sum-l3,.sum-l4,.sum-l5 {
+      overflow:hidden; border-radius:16px;
+      transition:transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s ease;
+      box-shadow:0 6px 20px rgba(0,0,0,.3);
+    }
+    .sum-l1:hover,.sum-l2:hover,.sum-l3:hover,.sum-l4:hover,.sum-l5:hover {
+      transform:translateY(-4px) scale(1.02);
+    }
+    .sum-top { display:flex; align-items:center; justify-content:center;
+               gap:8px; padding:14px 6px; font-weight:900; color:#fff; }
+    .sum-bot { display:flex; align-items:center; justify-content:center;
+               gap:6px; padding:14px 6px; font-weight:900; }
+  </style>
+  <style id="dynStyles"></style>
+  <style id="fontStyles"></style>
+  <style id="fontFamilyStyle"></style>
+</head>
+
+<body>
+
+<!-- ══════════════════════════ HEADER ══════════════════════════ -->
+<header class="px-5 py-3 z-30 shadow-2xl"
+        style="background:linear-gradient(135deg,#0c2d55 0%,#1a3a5c 60%,#0f3460 100%);
+               border-bottom:1px solid rgba(255,255,255,0.1)">
+  <div class="flex items-center justify-between gap-3">
+
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0
+                  bg-white/10 border-2 border-white/25 shadow-lg select-none">🏥</div>
+      <div class="min-w-0">
+        <div class="font-black text-2xl text-white leading-tight truncate" id="hospitalName">
+          ระบบ ER Status
+        </div>
+        <div class="text-sm font-semibold flex items-center gap-2 mt-0.5" style="color:#93c5fd">
+          ห้องอุบัติเหตุและฉุกเฉิน
+          <span class="text-red-400 font-black blink">● LIVE</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="apiBadge"
+         class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border
+                bg-indigo-800/60 border-indigo-600 text-indigo-300 text-xs font-medium">
+      <span>⏳</span><span>กำลังโหลด...</span>
+    </div>
+
+    <div class="flex items-center gap-2.5 shrink-0">
+      <div class="text-right hidden md:block mr-1">
+        <div class="mono text-4xl font-black tracking-widest text-white leading-none" id="clock">--:--:--</div>
+        <div class="text-sm leading-tight mt-0.5" style="color:#93c5fd" id="dateLabel">–</div>
+      </div>
+      <button onclick="manualRefresh()"
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg
+                     bg-white/10 hover:bg-white/20 border border-white/15
+                     text-blue-200 text-xs font-mono font-bold transition-colors">
+        ⟳ <span id="countdownDisplay">–</span>
+      </button>
+      <button onclick="openSettings()"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg border
+                     border-white/20 bg-white/10 text-blue-200 hover:bg-white/20 transition-colors">
+        ⚙ <span class="hidden sm:inline">ตั้งค่า</span>
+      </button>
+      <button onclick="window.open('/tv.html','_blank')"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg border
+                     border-white/20 bg-white/10 text-blue-200 hover:bg-white/20 transition-colors">
+        📺 <span class="hidden sm:inline">TV</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════ ZONE SUMMARY CARDS ═══════════════════ -->
+<div class="grid grid-cols-5 shrink-0 gap-2.5 px-3 py-2" id="summaryCards"></div>
+
+<!-- ══════════════════════ INFO BAR ════════════════════════════ -->
+<div id="subHeader" class="mx-3 my-2 px-5 py-3 flex items-center justify-between shrink-0">
+  <div class="flex items-center gap-3">
+    <span class="text-lg font-black" id="totalCount">รวม 0 ราย</span>
+    <span class="text-sm" id="lastUpdate"></span>
+  </div>
+  <div class="text-sm">รีเฟรชทุก <span id="refreshLabel">–</span></div>
+</div>
+
+<!-- ══════════════════════ LEAVE SUMMARY BAR ════════════════════ -->
+<div id="leaveSummaryWrap" style="padding:0 14px 8px;flex-shrink:0">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap" id="leaveSummaryBar">
+    <span id="leaveSummaryLoading" style="font-size:.78rem;opacity:.5">กำลังโหลดสรุปสถานะ...</span>
+  </div>
+</div>
+
+<!-- ══════════════════════ PATIENT TABLE ════════════════════════ -->
+<div id="tableWrap" style="padding:0 12px">
+  <table id="erTable">
+    <thead>
+      <tr>
+        <th style="width:12%;text-align:left;padding-left:16px">
+          <span class="th-icon">🕐</span><span class="th-text">เวลาที่มา</span>
+        </th>
+        <th class="staff-only" style="width:28%;text-align:left">
+          <span class="th-icon">👤</span><span class="th-text">ชื่อ – นามสกุล</span>
+        </th>
+        <th style="width:18%;text-align:center">
+          <span class="th-icon">🏥</span><span class="th-text">โซน</span>
+        </th>
+        <th style="width:22%;text-align:center">
+          <span class="th-icon">📋</span><span class="th-text">สถานะ</span>
+        </th>
+        <th style="width:20%;text-align:center;white-space:nowrap">
+          <span class="th-icon">⏱</span><span class="th-text">เวลารอ</span>
+        </th>
+      </tr>
+    </thead>
+    <tbody id="patientList"></tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════ OVERLAY ══════════════════════════════ -->
+<div id="overlay" onclick="closeSettings()" class="fixed inset-0 bg-black/50 z-40"></div>
+
+<!-- ══════════════════════ SETTINGS PANEL ══════════════════════ -->
+<aside id="settingsPanel"
+       class="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50
+              translate-x-full overflow-y-auto flex flex-col">
+
+  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+    <div class="font-bold text-gray-800">⚙ ตั้งค่า</div>
+    <button onclick="closeSettings()"
+            class="w-7 h-7 flex items-center justify-center rounded-full
+                   bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold">×</button>
+  </div>
+
+  <div class="p-5 flex-1 overflow-y-auto flex flex-col gap-5">
+
+    <!-- ① การรีเฟรช -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">🔄 การรีเฟรช</div>
+      <div class="grid grid-cols-3 gap-2" id="refreshOpts"></div>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ② ความเร็วเลื่อน -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">🐢 ความเร็วเลื่อน</div>
+      <div class="grid grid-cols-4 gap-2" id="scrollOpts"></div>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ② ชื่อผู้ป่วย -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">👤 ชื่อผู้ป่วย</div>
+      <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer
+                    border border-transparent hover:border-gray-100 transition-colors">
+        <input type="checkbox" id="chkMaskName" onchange="setMaskName(this.checked)"
+               class="w-4 h-4 rounded accent-indigo-600 cursor-pointer" />
+        <div>
+          <div class="font-bold text-sm text-gray-800">มาสก์นามสกุล</div>
+          <div class="text-xs text-gray-400">แสดงนามสกุลเป็น <span class="font-mono font-bold">XXXX</span></div>
+        </div>
+      </label>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ③ จำนวนแถว -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">📊 จำนวนแถวที่แสดงต่อหน้าจอ</div>
+      <div class="text-xs text-gray-400 mb-3">ขนาดตัวอักษรจะปรับอัตโนมัติให้พอดีจอ</div>
+      <div class="grid grid-cols-4 gap-2" id="rowsOpts"></div>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ④ ขนาดหัวคอลัมน์ -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">🔤 ขนาดตัวอักษรหัวคอลัมน์</div>
+      <div class="flex items-center gap-3">
+        <button class="fnt-btn" onclick="adjustFont('header',-1)">−</button>
+        <div class="flex-1 text-center">
+          <span class="font-black text-gray-800 text-lg" id="headerFontVal">11</span>
+          <span class="text-gray-400 text-xs ml-1">px</span>
+        </div>
+        <button class="fnt-btn" onclick="adjustFont('header',+1)">+</button>
+      </div>
+      <div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div id="headerFontBar" class="h-full bg-indigo-400 rounded-full transition-all"
+             style="width:30%"></div>
+      </div>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ⑤ ขนาดตัวอักษรข้อมูล -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">🔡 ขนาดตัวอักษรข้อมูล</div>
+      <div class="flex items-center gap-3">
+        <button class="fnt-btn" onclick="adjustFont('data',-1)">−</button>
+        <div class="flex-1 text-center">
+          <span class="font-black text-gray-800 text-lg" id="dataFontVal">16</span>
+          <span class="text-gray-400 text-xs ml-1">px</span>
+        </div>
+        <button class="fnt-btn" onclick="adjustFont('data',+1)">+</button>
+      </div>
+      <div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div id="dataFontBar" class="h-full bg-indigo-400 rounded-full transition-all"
+             style="width:45%"></div>
+      </div>
+      <div class="text-xs text-gray-400 mt-1.5 text-center italic">
+        * ใช้เมื่อ "จำนวนแถว" ตั้งเป็น อัตโนมัติ
+      </div>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ⑥ ฟ้อนต์ตัวอักษร -->
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs font-bold text-gray-400 uppercase tracking-wide">🔤 ฟ้อนต์ตัวอักษร</div>
+        <button onclick="refreshFonts()"
+                class="text-xs text-indigo-500 hover:text-indigo-700 font-semibold transition-colors">
+          ⟳ โหลดใหม่
+        </button>
+      </div>
+      <div class="text-xs text-gray-500 mb-2 px-1">
+        กำลังใช้: <span id="currentFontLabel" class="font-bold text-gray-800">Segoe UI</span>
+      </div>
+      <input type="text" id="fontSearch" placeholder="🔍 ค้นหาฟ้อนต์..."
+             oninput="filterFonts(this.value)"
+             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl mb-2
+                    focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all" />
+      <div id="fontList"
+           class="max-h-52 overflow-y-auto rounded-xl border border-gray-100 bg-white"></div>
+      <div id="fontLoadStatus" class="text-xs text-gray-400 mt-1.5 text-center"></div>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ⑦ สีพื้นหลัง -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">🖥 สีพื้นหลัง</div>
+      <label class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50
+                    transition-colors cursor-pointer border border-transparent hover:border-gray-100">
+        <div class="flex items-center gap-3">
+          <div id="swatch-bg" class="w-10 h-10 rounded-xl shadow border border-gray-200"></div>
+          <div>
+            <div class="font-bold text-sm text-gray-800">สีพื้นหลัง</div>
+            <div class="text-xs text-gray-400" id="hexLabel-bg">–</div>
+          </div>
+        </div>
+        <input type="color" id="colorPicker-bg" oninput="liveBgColor(this.value)" />
+      </label>
+      <div class="mt-3">
+        <div class="text-xs text-gray-400 mb-2">สีด่วน</div>
+        <div class="flex gap-2 flex-wrap" id="bgPresets"></div>
+      </div>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ⑧ สีหัวคอลัมน์ -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">📋 สีพื้นหลังหัวคอลัมน์</div>
+      <label class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50
+                    transition-colors cursor-pointer border border-transparent hover:border-gray-100">
+        <div class="flex items-center gap-3">
+          <div id="swatch-header" class="w-10 h-10 rounded-xl shadow border border-gray-200"></div>
+          <div>
+            <div class="font-bold text-sm text-gray-800">สีพื้นหลัง</div>
+            <div class="text-xs text-gray-400" id="hexLabel-header">–</div>
+          </div>
+        </div>
+        <input type="color" id="colorPicker-header" oninput="liveHeaderBgColor(this.value)" />
+      </label>
+      <div class="mt-3">
+        <div class="text-xs text-gray-400 mb-2">สีด่วน</div>
+        <div class="flex gap-2 flex-wrap" id="headerBgPresets"></div>
+      </div>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ⑩ ความสว่างสีแถว -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">🎨 ความสว่างสีพื้นแถว</div>
+      <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
+        <span>เข้มสุด</span>
+        <span class="font-black text-gray-700" id="rowBrightnessVal">100%</span>
+        <span>สีสด</span>
+      </div>
+      <input type="range" id="rowBrightnessSlider" min="20" max="140" value="115"
+             oninput="liveRowBrightness(this.value)"
+             class="w-full h-2 rounded-full accent-indigo-600 cursor-pointer" />
+      <div class="flex gap-2 mt-3 flex-wrap">
+        <button onclick="liveRowBrightness(130)"
+                class="px-3 py-1 text-xs font-bold rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 transition-colors">
+          สว่าง 130%
+        </button>
+        <button onclick="liveRowBrightness(115)"
+                class="px-3 py-1 text-xs font-bold rounded-lg border-2 border-indigo-400 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
+          สว่าง 115%
+        </button>
+        <button onclick="liveRowBrightness(100)"
+                class="px-3 py-1 text-xs font-bold rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 transition-colors">
+          สีสด 100%
+        </button>
+        <button onclick="liveRowBrightness(60)"
+                class="px-3 py-1 text-xs font-bold rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 transition-colors">
+          เข้ม 60%
+        </button>
+      </div>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- ⑨ สีโซน -->
+    <div>
+      <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">🎨 สีโซน</div>
+      <div id="colorPickers" class="flex flex-col gap-1"></div>
+      <button id="btnSaveDefault" onclick="saveAsDefault()"
+              class="mt-4 w-full py-2.5 text-sm font-semibold rounded-xl
+                     border-2 border-indigo-400 bg-indigo-50 text-indigo-700
+                     hover:bg-indigo-100 transition-colors">
+        💾 บันทึกเป็น Default
+      </button>
+      <button onclick="resetColors()"
+              class="mt-2 w-full py-2.5 text-sm font-semibold rounded-xl
+                     border-2 border-dashed border-gray-200 text-gray-500
+                     hover:border-gray-300 hover:bg-gray-50 transition-colors">
+        ↩ รีเซ็ตทั้งหมด
+      </button>
+    </div>
+
+  </div>
+
+  <div class="px-5 py-3 border-t border-gray-100 shrink-0 text-center text-xs text-gray-400">
+    การตั้งค่าบันทึกอัตโนมัติในเบราว์เซอร์
+  </div>
+</aside>
+
+<!-- ═══════════════════════════ SCRIPT ═══════════════════════════ -->
+<script>
+/* ── Auto redirect file:// → http:// ── */
+(function(){ if(location.protocol==='file:') location.replace('http://localhost:4000/dashboard.html'); })();
+
+/* ═══════════════════════ CONSTANTS ═════════════════════════════ */
+
+const DEFAULT_COLORS         = { 1:'#ef4444', 2:'#f472b6', 3:'#facc15', 4:'#4ade80', 5:'#94a3b8' };
+const DEFAULT_BG             = '#080c14';
+const DEFAULT_HEADER_BG      = '#0d1b2e';
+const DEFAULT_ROW_BRIGHTNESS = 1.15;
+const BG_PRESETS     = [
+  { hex:'#080c14', label:'กาแล็กซี่'  },
+  { hex:'#0f172a', label:'กลางคืน'    },
+  { hex:'#0a1628', label:'น้ำเงินลึก' },
+  { hex:'#0d1f1a', label:'ป่าเข้ม'    },
+  { hex:'#f8fafc', label:'ขาว'        },
+  { hex:'#f0fdf4', label:'มิ้นท์'     },
+];
+const REFRESH_OPTS = [
+  { label:'15 วิ.',  val:15  }, { label:'30 วิ.',  val:30  },
+  { label:'1 นาที', val:60  }, { label:'2 นาที', val:120 },
+  { label:'5 นาที', val:300 }, { label:'ปิด',    val:0   },
+];
+const SCROLL_OPTS = [
+  { label:'ช้ามาก', val:6  }, { label:'ช้า',   val:10 },
+  { label:'ปานกลาง', val:18 }, { label:'เร็ว',  val:30 },
+];
+const ROWS_OPTS = [
+  { label:'อัตโนมัติ', val:0  }, { label:'5',  val:5  },
+  { label:'8',         val:8  }, { label:'10', val:10 },
+  { label:'12',        val:12 }, { label:'15', val:15 },
+  { label:'18',        val:18 }, { label:'20', val:20 },
+];
+
+/* ── Fallback font list (Windows + Thai) ── */
+const FALLBACK_FONTS = [
+  'Segoe UI','Segoe UI Variable','Tahoma','Arial','Verdana','Calibri','Cambria',
+  'Century Gothic','Trebuchet MS','Georgia','Times New Roman',
+  'Consolas','Courier New','Lucida Console','Cascadia Code',
+  'Angsana New','Angsana UPC','Browallia New','Browallia UPC',
+  'Cordia New','Cordia UPC','DilleniaUPC','EucrosiaUPC',
+  'FreesiaUPC','IrisUPC','JasmineUPC','KodchiangUPC',
+  'Leelawadee','Leelawadee UI','Leelawadee UI Semilight','LilyUPC',
+  'Noto Sans Thai','Noto Sans Thai UI',
+  'Sarabun','Prompt','Kanit','Mitr','Itim','Charm','Pridi',
+  'IBM Plex Sans Thai','IBM Plex Sans Thai Looped',
+  'Chonburi','Chakra Petch','K2D','Taviraj',
+].sort();
+
+/* ═══════════════════════ STATE ═════════════════════════════════ */
+
+let colors        = { ...DEFAULT_COLORS };
+let bgColor       = DEFAULT_BG;
+let headerBgColor = DEFAULT_HEADER_BG;
+let isDarkTheme   = true;
+let refreshSecs   = 30;
+let fetchTimer    = null;   // background data fetch interval
+let cdTimer       = null;
+let cdCount       = 30;
+let tvMode        = false;
+let maskName      = false;
+let maxRows       = 0;
+let pendingData   = null;   // latest fetched data, applied when scroll reaches bottom
+const leaveTimestamps = {}; // { patientId: timestamp เมื่อ leave='Y' ครั้งแรก }
+const LEAVE_GRACE_MS  = 10 * 60 * 1000; // 10 นาที
+let headerFontSz   = 18;
+let dataFontSz     = 26;
+let rowBrightness  = 1.15;
+let selectedFont  = 'Segoe UI';
+let systemFonts   = [];
+
+/* ═══════════════════════ TRIAGE CONFIG ═════════════════════════ */
+
+const TRIAGE = {
+  1:{ label:'L1', thName:'แดง',    enName:'Resuscitation', maxWait:0,   animCls:'anim-l1', icon:'🔴' },
+  2:{ label:'L2', thName:'ชมพู',   enName:'Emergency',     maxWait:15,  animCls:'anim-l2', icon:'🩷' },
+  3:{ label:'L3', thName:'เหลือง', enName:'Urgent',        maxWait:30,  animCls:'',        icon:'🟡' },
+  4:{ label:'L4', thName:'เขียว',  enName:'Semi-Urgent',   maxWait:60,  animCls:'',        icon:'🟢' },
+  5:{ label:'L5', thName:'ขาว',    enName:'Non-Urgent',    maxWait:120, animCls:'',        icon:'⬜' },
+};
+
+const STATUS_CONFIG = {
+  triage:      { label:'รอคัดกรอง',
+    dk:{ bg:'rgba(71,85,105,.65)',    fg:'#f1f5f9', bd:'#64748b' },
+    lt:{ bg:'#cbd5e1',                fg:'#0f172a', bd:'#475569' } },
+  wait_doctor: { label:'รอพบแพทย์',
+    dk:{ bg:'rgba(202,138,4,.60)',    fg:'#fef9c3', bd:'#f59e0b' },
+    lt:{ bg:'#fef08a',                fg:'#713f12', bd:'#ca8a04' } },
+  with_doctor: { label:'กำลังพบแพทย์',
+    dk:{ bg:'rgba(99,102,241,.60)',   fg:'#e0e7ff', bd:'#818cf8' },
+    lt:{ bg:'#c7d2fe',                fg:'#312e81', bd:'#6366f1' } },
+  wait_lab:    { label:'รอผล Lab',
+    dk:{ bg:'rgba(139,92,246,.60)',   fg:'#ede9fe', bd:'#a78bfa' },
+    lt:{ bg:'#ddd6fe',                fg:'#4c1d95', bd:'#7c3aed' } },
+  wait_xray:   { label:'รอ X-Ray',
+    dk:{ bg:'rgba(79,70,229,.60)',    fg:'#e0e7ff', bd:'#818cf8' },
+    lt:{ bg:'#bfdbfe',                fg:'#1e3a8a', bd:'#3b82f6' } },
+  wait_obs:    { label:'รอยา/สังเกต',
+    dk:{ bg:'rgba(14,165,233,.60)',   fg:'#e0f2fe', bd:'#38bdf8' },
+    lt:{ bg:'#bae6fd',                fg:'#0c4a6e', bd:'#0ea5e9' } },
+  wait_admit:  { label:'รอ Admit',
+    dk:{ bg:'rgba(234,88,12,.60)',    fg:'#ffedd5', bd:'#fb923c' },
+    lt:{ bg:'#fed7aa',                fg:'#7c2d12', bd:'#f97316' } },
+  discharged:  { label:'จำหน่ายกลับ',
+    dk:{ bg:'rgba(21,128,61,.60)',    fg:'#bbf7d0', bd:'#4ade80' },
+    lt:{ bg:'#bbf7d0',                fg:'#14532d', bd:'#16a34a' } },
+};
+
+/* ═══════════════════════ DATA STATE ════════════════════════════ */
+
+let patients        = [];
+let lastError       = null;
+let lastErrType     = null;
+let autoRetryActive = false;
+const API_BASE      = 'http://localhost:4000';
+
+/* ── Name masking ── */
+function maskLastName(name) {
+  if (!maskName || !name || name === '—') return name;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  parts[parts.length - 1] = 'XXXX';
+  return parts.join(' ');
+}
+
+/* ── Map status name → key ── */
+function mapStatus(name) {
+  if (!name) return 'triage';
+  const n = name.toLowerCase();
+  if (n.includes('ลงทะเบียน')||n.includes('คัดกรอง')||n.includes('รอตรวจ')||n.includes('triage')) return 'triage';
+  if (n.includes('รอแพทย์')||n.includes('รอพบแพทย์')||n.includes('รอหมอ'))                        return 'wait_doctor';
+  if (n.includes('พบแพทย์')||n.includes('กำลังตรวจ')||n.includes('ตรวจอยู่')||n.includes('กำลังพบ')) return 'with_doctor';
+  if (n.includes('lab')||n.includes('เลือด')||n.includes('ปัสสาวะ'))                               return 'wait_lab';
+  if (n.includes('x-ray')||n.includes('xray')||n.includes('ฟิล์ม')||n.includes('เอกซเรย์'))       return 'wait_xray';
+  if (n.includes('ติดยา')||n.includes('จ่ายยา')||n.includes('รอยา')||n.includes('รับยา')||n.includes('กำลังติด')) return 'wait_obs';
+  if (n.includes('สังเกต')||n.includes('observe'))                                                  return 'wait_obs';
+  if (n.includes('admit')||n.includes('รับไว้')||n.includes('นอน'))                                return 'wait_admit';
+  if (n.includes('จำหน่าย')||n.includes('กลับบ้าน')||n.includes('discharge'))                      return 'discharged';
+  return 'triage';
+}
+
+/* ── Gender icon from Thai honorific ── */
+function genderIcon(name) {
+  if (!name || name === '—') return '🧑';
+  const n = name.trim();
+  if (n.startsWith('เด็กชาย') || n.startsWith('ด.ช.') || n.startsWith('ด.ช')) return '👦';
+  if (n.startsWith('เด็กหญิง')|| n.startsWith('ด.ญ.') || n.startsWith('ด.ญ')) return '👧';
+  if (n.startsWith('นาย'))    return '👨';
+  if (n.startsWith('นางสาว')) return '👩';
+  if (n.startsWith('นาง'))    return '👩';
+  if (n.startsWith('พระ')||n.startsWith('หลวง')||n.startsWith('สามเณร')) return '🧘';
+  return '🧑';
+}
+
+/* ── Map API row → patient ── */
+function mapApiData(rows) {
+  const now    = Date.now();
+  const seenIds = new Set();
+
+  const mapped = rows.map((row, idx) => {
+    const timeStr = (row.enter_time||'00:00:00').toString().split('T').pop().split('.')[0];
+    const [h,m,s] = timeStr.split(':').map(Number);
+    const ts = new Date();
+    ts.setHours(h||0, m||0, s||0, 0);
+    const lv      = Math.min(Math.max(parseInt(row.triage_level)||5, 1), 5);
+    const hn      = String(row.hn||'').replace(/\s/g,'');
+    const id      = hn ? `HN${hn}` : `Q${String(idx+1).padStart(3,'0')}`;
+    const isLeave = (row.leave_flag||'').trim().toUpperCase() === 'Y';
+    seenIds.add(id);
+
+    if (isLeave) {
+      /* บันทึกเวลาครั้งแรกที่เห็น leave=Y */
+      if (!leaveTimestamps[id]) leaveTimestamps[id] = now;
+    } else {
+      /* กลับมาเป็น active → ล้าง timestamp */
+      delete leaveTimestamps[id];
+    }
+
+    const leaveTs      = leaveTimestamps[id] || null;
+    const leaveElapsed = leaveTs ? now - leaveTs : 0;
+
+    return {
+      id, lv,
+      cc:           row.pt_name || '—',
+      arrivalTs:    ts.getTime(),
+      status:       mapStatus(row.status_name),
+      rawStatus:    row.status_name || '',
+      isLeave,
+      leaveElapsed, // ms ที่ผ่านมาตั้งแต่ leave=Y
+    };
+  });
+
+  /* ล้าง timestamp ของคนไข้ที่หายออกจาก DB แล้ว */
+  Object.keys(leaveTimestamps).forEach(id => {
+    if (!seenIds.has(id)) delete leaveTimestamps[id];
+  });
+
+  /* กรอง: leave=Y เกิน 10 นาที → เอาออก */
+  return mapped.filter(p => !p.isLeave || p.leaveElapsed < LEAVE_GRACE_MS);
+}
+
+/* ── Initial fetch — apply immediately, reset scroll, start cycles ── */
+async function initialFetch() {
+  setApiState('loading');
+  try {
+    const resp = await fetch(`${API_BASE}/api/er-data`, { cache:'no-store' });
+    const json = await resp.json().catch(()=>({}));
+    if (!resp.ok||!json.ok) {
+      const msg = json.error || `HTTP ${resp.status}`;
+      const t   = (resp.status===503&&msg.includes('ตั้งค่า')) ? 'noconfig' : 'dberror';
+      throw Object.assign(new Error(msg), { errType:t });
+    }
+    patients    = mapApiData(json.data||[]);
+    lastError   = null; lastErrType = null;
+    stopAutoRetry();
+    if (json.hospitalName) document.getElementById('hospitalName').textContent = json.hospitalName;
+    setApiState('ok', `${json.count} ราย · ${new Date().toLocaleTimeString('th-TH')}`);
+  } catch(err) {
+    lastError   = err.message;
+    lastErrType = err.errType || (err instanceof TypeError ? 'network' : 'dberror');
+    setApiState('error', err.message);
+    if (lastErrType==='network') autoRetryLoop(); else stopAutoRetry();
+  }
+  renderSummary();
+  renderList(true);       // reset scroll to top
+  fetchLeaveSummary();    // สรุปสถานะออกจาก ER (independent, no scroll dependency)
+  startScrollCycle();     // start continuous scroll
+  startFetchTimer();      // start background fetch
+}
+
+/* ── Background fetch — store as pending, never disturb scroll ── */
+async function backgroundFetch() {
+  try {
+    const resp = await fetch(`${API_BASE}/api/er-data`, { cache:'no-store' });
+    const json = await resp.json().catch(()=>({}));
+    if (!resp.ok||!json.ok) {
+      const msg = json.error || `HTTP ${resp.status}`;
+      const t   = (resp.status===503&&msg.includes('ตั้งค่า')) ? 'noconfig' : 'dberror';
+      lastError = msg; lastErrType = t;
+      setApiState('error', msg);
+      if (t==='network') autoRetryLoop(); else stopAutoRetry();
+      return;
+    }
+    pendingData = json;
+    lastError = null; lastErrType = null;
+    stopAutoRetry();
+    setApiState('ok', `${json.count} ราย · ${new Date().toLocaleTimeString('th-TH')}`);
+  } catch(err) {
+    lastError   = err.message;
+    lastErrType = err instanceof TypeError ? 'network' : 'dberror';
+    setApiState('error', err.message);
+    if (lastErrType==='network') autoRetryLoop(); else stopAutoRetry();
+  }
+}
+
+/* ── Apply pending data at bottom of scroll (no scroll reset) ── */
+function applyPendingData() {
+  if (!pendingData) return;
+  const json = pendingData; pendingData = null;
+  patients = mapApiData(json.data||[]);
+  if (json.hospitalName) document.getElementById('hospitalName').textContent = json.hospitalName;
+  renderSummary();
+  renderList(false);   // keep scroll position
+  if (json.leaveSummary) renderLeaveSummary(json.leaveSummary);
+}
+
+/* ── Leave Summary ── */
+function renderLeaveSummary(items) {
+  const bar = document.getElementById('leaveSummaryBar');
+  if (!bar) return;
+  const loading = document.getElementById('leaveSummaryLoading');
+  if (loading) loading.remove();
+
+  if (!items || items.length === 0) {
+    bar.innerHTML = `<span style="font-size:.78rem;opacity:.45">ไม่มีข้อมูลสถานะวันนี้</span>`;
+    return;
+  }
+
+  const totalToday = items.reduce((a,b) => a + parseInt(b.cnt||0), 0);
+  const dk = isDarkTheme;
+
+  const labelColor    = dk ? 'rgba(255,255,255,.85)' : '#1e293b';
+  const wrapBgActive  = dk ? 'rgba(255,255,255,.07)'  : 'rgba(0,0,0,.05)';
+  const wrapBgLeft    = dk ? 'rgba(34,197,94,.10)'    : 'rgba(34,197,94,.12)';
+  const borderLeft    = 'rgba(34,197,94,.45)';
+
+  const chips = items.map(item => {
+    const cnt       = parseInt(item.cnt||0);
+    const isLeft    = item.leave_flag === 'Y';
+    const sk        = mapStatus(item.status_name);
+    const sConf     = STATUS_CONFIG[sk];
+    const dotColor  = isLeft ? '#22c55e' : (sConf ? sConf.dk.bd : '#94a3b8');
+    const cntColor  = isLeft ? '#22c55e' : (sConf ? sConf.dk.bd : '#94a3b8');
+    const bg        = isLeft ? wrapBgLeft : wrapBgActive;
+    const border    = isLeft ? borderLeft : `${dotColor}55`;
+
+    return `<span style="
+      display:inline-flex;align-items:center;gap:5px;
+      background:${bg};
+      border:1.5px solid ${border};
+      border-radius:20px;padding:3px 11px 3px 7px;
+      white-space:nowrap;cursor:default;
+    ">
+      <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};
+                   flex-shrink:0;box-shadow:0 0 6px ${dotColor}88"></span>
+      <span style="font-size:.82rem;font-weight:700;color:${labelColor}">${item.status_name}</span>
+      <span style="font-size:1rem;font-weight:900;color:${cntColor};margin-left:2px">${cnt}</span>
+    </span>`;
+  }).join('');
+
+  bar.innerHTML = `
+    <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;
+                 color:${dk?'#475569':'#94a3b8'};text-transform:uppercase;
+                 margin-right:4px;white-space:nowrap">
+      📋 สถานะ ER วันนี้ (${totalToday} ราย)
+    </span>
+    ${chips}`;
+}
+
+async function fetchLeaveSummary() {
+  try {
+    const resp = await fetch('/api/er-leave-summary', { cache:'no-store' });
+    const json = await resp.json();
+    if (json.ok) renderLeaveSummary(json.data);
+  } catch {}
+}
+
+/* ── Auto retry ── */
+async function autoRetryLoop() {
+  if (autoRetryActive) return;
+  autoRetryActive = true;
+  while (autoRetryActive) {
+    for (let i=3; i>=1; i--) {
+      if (!autoRetryActive) return;
+      _setRetryText(i);
+      await new Promise(r=>setTimeout(r,1000));
+    }
+    if (!autoRetryActive) return;
+    _setRetryText(0);
+    try {
+      const r = await fetch(`${API_BASE}/api/status`, { cache:'no-store' });
+      if (r.ok) { autoRetryActive=false; initialFetch(); return; }
+    } catch {}
+  }
+}
+function stopAutoRetry() { autoRetryActive=false; }
+function _setRetryText(s) {
+  const el=document.getElementById('retryCountdown'); if(!el) return;
+  el.innerHTML = s===0
+    ? '<span style="display:inline-block;animation:spin .7s linear infinite;margin-right:6px">⟳</span>กำลังลองใหม่...'
+    : `กำลังลองใหม่ใน ${s} วินาที...`;
+}
+
+/* ── API badge ── */
+function setApiState(state, msg='') {
+  const el=document.getElementById('apiBadge'); if(!el) return;
+  const cfg={
+    loading:{ cls:'bg-indigo-800/60 text-indigo-300 border-indigo-600', icon:'⏳', text:'กำลังโหลด...' },
+    ok:     { cls:'bg-green-900/60 text-green-300 border-green-700',   icon:'✅', text:msg },
+    error:  { cls:'bg-red-900/60  text-red-300   border-red-700',      icon:'❌', text:msg },
+  }[state]||{};
+  el.className=`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium ${cfg.cls}`;
+  el.innerHTML=`<span>${cfg.icon}</span><span class="max-w-xs truncate">${cfg.text}</span>`;
+}
+
+/* ═══════════════════════ COLOR UTILS ═══════════════════════════ */
+
+function hexToRgb(hex) {
+  return { r:parseInt(hex.slice(1,3),16), g:parseInt(hex.slice(3,5),16), b:parseInt(hex.slice(5,7),16) };
+}
+function luminance(hex) {
+  const {r,g,b}=hexToRgb(hex);
+  return [r,g,b].reduce((acc,c,i)=>{
+    c/=255; c=c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+    return acc+c*[0.2126,0.7152,0.0722][i];
+  },0);
+}
+const textOn = hex => luminance(hex)>0.35?'#1a1a1a':'#ffffff';
+
+function rowZoneCss(lv, hex, r, g, b) {
+  const br  = rowBrightness;
+  const mix = Math.max(0, br - 1.0); /* > 1.0 → ผสมขาว */
+  const dr  = Math.min(255, Math.round(r  * Math.min(br,1) + (255-r)  * mix));
+  const dg  = Math.min(255, Math.round(g  * Math.min(br,1) + (255-g)  * mix));
+  const db2 = Math.min(255, Math.round(b  * Math.min(br,1) + (255-b)  * mix));
+  const rowHex=`rgb(${dr},${dg},${db2})`;
+  const outline=`1px 1px 0 #000,-1px 1px 0 #000,1px -1px 0 #000,-1px -1px 0 #000,0 2px 4px rgba(0,0,0,0.5)`;
+  return `
+    .row-l${lv} td {
+      background:  ${rowHex};
+      color:       #ffffff;
+      text-shadow: ${outline};
+      border-top:    2px solid rgba(255,255,255,0.15);
+      border-bottom: 2px solid rgba(255,255,255,0.15);
+    }
+    .row-l${lv} td:first-child {
+      border-left: 8px solid ${hex};
+      border-radius: 14px 0 0 14px;
+      box-shadow: none;
+    }
+    .row-l${lv} td:last-child {
+      border-right: 2px solid rgba(255,255,255,0.20);
+      border-radius: 0 14px 14px 0;
+    }
+    .pill-l${lv} {
+      background: rgba(255,255,255,0.20);
+      border: 2px solid rgba(255,255,255,0.65);
+      color: #ffffff; font-weight:900; text-shadow:${outline};
+    }`;
+}
+
+function applyColors() {
+  document.body.style.background = bgColor;
+  const isDark = luminance(bgColor) < 0.15;
+  isDarkTheme = isDark;
+
+  const hdrText = luminance(headerBgColor) > 0.18 ? '#1a1a1a' : '#e2e8f0';
+
+  const hdrIconBg = luminance(headerBgColor) > 0.18
+    ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.18)';
+
+  let css = `
+    #erTable thead th {
+      background: ${headerBgColor};
+      color:      ${hdrText};
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    #erTable thead th:first-child { border-radius: 14px 0 0 14px; }
+    #erTable thead th:last-child  { border-radius: 0 14px 14px 0; }
+    #erTable thead th .th-icon { background: ${hdrIconBg}; }
+    #erTable thead th .th-text { color: ${hdrText}; }
+    #erTable tbody tr:hover td { filter: brightness(${isDark ? '1.18' : '.92'}); }
+    #subHeader, #leaveSummaryWrap {
+      background:    ${isDark ? 'rgba(15,25,50,0.80)'   : 'rgba(255,255,255,0.88)'};
+      border:        1px solid ${isDark ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.10)'};
+      border-radius: 14px;
+      box-shadow:    ${isDark ? '0 4px 20px rgba(0,0,0,.45)' : '0 4px 16px rgba(0,0,0,.10)'};
+      backdrop-filter: blur(8px);
+    }
+    #subHeader #totalCount { color: ${isDark ? '#f1f5f9' : '#0f172a'}; }
+    #subHeader #lastUpdate, #subHeader #refreshLabel { color: ${isDark ? '#64748b' : '#94a3b8'}; }
+    .wt-over { color: ${isDark ? '#f87171' : '#b91c1c'} !important; }
+    .wt-warn { color: ${isDark ? '#fbbf24' : '#b45309'} !important; }
+    .wt-ok   { color: ${isDark ? '#4ade80' : '#166534'} !important; }
+  `;
+
+  for (let lv=1; lv<=5; lv++) {
+    const hex=colors[lv], {r,g,b}=hexToRgb(hex), lum=luminance(hex);
+
+    const outline='1px 1px 0 #000,-1px 1px 0 #000,1px -1px 0 #000,-1px -1px 0 #000,0 2px 5px rgba(0,0,0,0.6)';
+
+    if (isDark) {
+      /* ── DARK THEME ── */
+      css+=`
+        .sum-l${lv} {
+          border: 2px solid rgba(${r},${g},${b},0.5);
+          box-shadow: 0 0 24px rgba(${r},${g},${b},0.25), 0 4px 16px rgba(0,0,0,.6);
+        }
+        .sum-top-${lv} { background: rgba(${r},${g},${b},0.85); }
+        .sum-top-${lv} span { color:#ffffff; text-shadow:${outline}; }
+        .sum-bot-${lv} { background: rgba(10,15,25,0.92); }
+        .sum-bot-${lv} .sc-count {
+          color: #ffffff;
+          text-shadow: ${outline};
+        }
+        .sum-bot-${lv} .sc-label { color:#ffffff; text-shadow:${outline}; }
+        ${rowZoneCss(lv,hex,r,g,b)}
+        .ghdr-l${lv} { color: ${hex}; }
+        #swatch-${lv} { background: ${hex}; }
+      `;
+    } else {
+      /* ── LIGHT THEME ── */
+      css+=`
+        .sum-l${lv} {
+          border: 2px solid ${hex};
+          box-shadow: 0 4px 16px rgba(${r},${g},${b},.35), 0 2px 8px rgba(0,0,0,.12);
+        }
+        .sum-top-${lv} { background: ${hex}; }
+        .sum-top-${lv} span { color:#ffffff; text-shadow:${outline}; }
+        .sum-bot-${lv} { background: #ffffff; }
+        .sum-bot-${lv} .sc-count {
+          color: #ffffff;
+          background: ${hex};
+          padding: 0 10px; border-radius: 8px;
+          text-shadow: ${outline};
+        }
+        .sum-bot-${lv} .sc-label { color:#374151; font-weight:800; }
+        ${rowZoneCss(lv,hex,r,g,b)}
+        .ghdr-l${lv} { color: ${hex}; }
+        #swatch-${lv} { background: ${hex}; }
+      `;
+    }
+  }
+
+  Object.entries(STATUS_CONFIG).forEach(([key,s])=>{
+    const c=isDark?s.dk:s.lt;
+    css+=`.st-${key}{background:${c.bg};color:${c.fg};border:2px solid ${c.bd};font-weight:800;text-shadow:none;}`;
+  });
+
+  document.getElementById('dynStyles').textContent=css;
+}
+
+/* ═══════════════════════ FONT SIZE ═════════════════════════════ */
+
+function getFontStyleEl() {
+  let el=document.getElementById('fontStyles');
+  if (!el) { el=document.createElement('style'); el.id='fontStyles'; document.head.appendChild(el); }
+  return el;
+}
+
+function applyFontSizes() {
+  getFontStyleEl().textContent=`
+    #erTable thead th { font-size:${headerFontSz}px !important; }
+    #erTable tbody td { font-size:${dataFontSz}px !important; }
+  `;
+}
+
+/* ── Auto-fit: calculate font size so maxRows rows fill the visible area ── */
+function applyMaxRows() {
+  if (!maxRows) { applyFontSizes(); return; }
+  requestAnimationFrame(()=>{
+    const wrap  = document.getElementById('tableWrap');
+    const thead = document.querySelector('#erTable thead');
+    if (!wrap||!thead) return;
+
+    const available = wrap.clientHeight - thead.offsetHeight;
+    const rowH      = Math.max(20, Math.floor(available / maxRows));
+    const sz        = Math.max(9, Math.min(40, Math.floor(rowH / 2.6)));
+    const padV      = Math.max(3, Math.floor((rowH - sz * 1.35) / 2));
+
+    getFontStyleEl().textContent=`
+      #erTable thead th { font-size:${headerFontSz}px !important; }
+      #erTable tbody td {
+        font-size:${sz}px !important;
+        padding-top:${padV}px !important;
+        padding-bottom:${padV}px !important;
+      }
+    `;
+  });
+}
+
+/* ── Adjust font buttons ── */
+function adjustFont(type, delta) {
+  if (type==='header') {
+    headerFontSz = Math.max(8, Math.min(60, headerFontSz+delta));
+    document.getElementById('headerFontVal').textContent = headerFontSz;
+    document.getElementById('headerFontBar').style.width = ((headerFontSz-8)/52*100)+'%';
+  } else {
+    dataFontSz = Math.max(8, Math.min(80, dataFontSz+delta));
+    document.getElementById('dataFontVal').textContent = dataFontSz;
+    document.getElementById('dataFontBar').style.width = ((dataFontSz-8)/72*100)+'%';
+  }
+  if (maxRows) applyMaxRows(); else applyFontSizes();
+  saveSettings();
+}
+
+function syncFontUI() {
+  const hv=document.getElementById('headerFontVal'), hb=document.getElementById('headerFontBar');
+  const dv=document.getElementById('dataFontVal'),   db=document.getElementById('dataFontBar');
+  if(hv) hv.textContent=headerFontSz;
+  if(hb) hb.style.width=((headerFontSz-8)/52*100)+'%';
+  if(dv) dv.textContent=dataFontSz;
+  if(db) db.style.width=((dataFontSz-8)/72*100)+'%';
+}
+
+/* ═══════════════════════ CLOCK ═════════════════════════════════ */
+
+function updateClock() {
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  document.getElementById('clock').textContent=`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  const days=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+  const months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  document.getElementById('dateLabel').textContent=
+    `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()+543}`;
+}
+
+/* ═══════════════════════ RENDER SUMMARY ════════════════════════ */
+
+function renderSummary() {
+  const counts={1:0,2:0,3:0,4:0,5:0};
+  /* ไม่นับ leave=Y และ discharged ใน zone count */
+  patients.filter(p=>p.status!=='discharged'&&!p.isLeave).forEach(p=>counts[p.lv]++);
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  document.getElementById('totalCount').textContent=`รวมคนไข้ ${total} ราย`;
+  let html='';
+  for (let lv=1;lv<=5;lv++) {
+    const t=TRIAGE[lv];
+    html+=`
+      <div class="sum-l${lv} select-none cursor-default">
+        <div class="sum-top sum-top-${lv}">
+          <span style="font-size:2rem;line-height:1">${t.icon}</span>
+          <span style="font-size:1.5rem;letter-spacing:.02em">โซน${t.thName}</span>
+        </div>
+        <div class="sum-bot sum-bot-${lv}">
+          <span class="sc-label" style="font-size:1.1rem">จำนวน</span>
+          <span class="sc-count" style="font-size:4rem;line-height:1;margin:0 4px">${counts[lv]}</span>
+          <span class="sc-label" style="font-size:1.1rem">คน</span>
+        </div>
+      </div>`;
+  }
+  document.getElementById('summaryCards').innerHTML=html;
+}
+
+/* ═══════════════════════ WAIT TIME ═════════════════════════════ */
+
+const waitMins = p => Math.floor((Date.now()-p.arrivalTs)/60000);
+function waitCls(mins,lv) {
+  const max=TRIAGE[lv].maxWait;
+  if (lv===1||mins>=max)   return 'wt-over font-black';
+  if (mins>=max*0.75)      return 'wt-warn font-black';
+  return 'wt-ok font-bold';
+}
+function waitStr(m) {
+  return m<60?`${m} นาที`:`${Math.floor(m/60)} ชม.${m%60>0?` ${m%60} น.`:''}`;
+}
+
+/* ═══════════════════════ RENDER LIST ═══════════════════════════ */
+
+function renderList(resetScroll = true) {
+  const tbody=document.getElementById('patientList');
+  const lu=document.getElementById('lastUpdate');
+
+  if (patients.length===0) {
+    let msg='';
+    if (lastErrType==='noconfig') {
+      msg=`<tr><td colspan="5" class="py-16 text-center">
+        <div class="text-5xl mb-4">⚙️</div>
+        <div class="text-xl font-black text-yellow-400 mb-2">ยังไม่ได้ตั้งค่าการเชื่อมต่อฐานข้อมูล</div>
+        <div class="text-sm text-slate-400 mb-6">กรุณาตั้งค่าเพื่อเริ่มใช้งาน</div>
+        <a href="${API_BASE}/settings.html" class="inline-flex items-center gap-2 px-8 py-3 rounded-2xl
+           font-black text-base text-white"
+           style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 20px rgba(99,102,241,.4)">
+          ⚙ ไปตั้งค่าการเชื่อมต่อ</a></td></tr>`;
+    } else if (lastErrType==='dberror') {
+      msg=`<tr><td colspan="5" class="py-16 text-center">
+        <div class="text-5xl mb-4">🗄️</div>
+        <div class="text-xl font-black text-red-400 mb-2">เชื่อมต่อฐานข้อมูลไม่สำเร็จ</div>
+        <div class="mono text-xs text-red-300/60 mb-6 max-w-md mx-auto break-all px-4">${lastError}</div>
+        <a href="${API_BASE}/settings.html" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl
+           font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-500 border border-indigo-400">
+          ⚙ ตรวจสอบการตั้งค่า</a></td></tr>`;
+    } else if (lastErrType==='network') {
+      msg=`<tr><td colspan="5" class="py-16 text-center">
+        <div class="text-6xl mb-4">🔌</div>
+        <div class="text-xl font-black text-red-400 mb-2">ไม่พบ Server</div>
+        <div class="text-sm text-slate-400 mb-4">
+          ดับเบิลคลิก <span class="text-yellow-300 font-mono font-bold">autostart.bat</span></div>
+        <div id="retryCountdown" class="text-indigo-300 font-bold text-base">
+          กำลังลองใหม่ใน 3 วินาที...</div></td></tr>`;
+    } else {
+      msg=`<tr><td colspan="5" class="py-16 text-center">
+        <div class="text-6xl mb-4">📋</div>
+        <div class="text-xl text-slate-400">ไม่มีข้อมูลผู้ป่วยวันนี้</div></td></tr>`;
+    }
+    tbody.innerHTML=msg;
+    if(lu) lu.textContent='';
+    return;
+  }
+
+  /* active ก่อน, leaving ตามท้าย */
+  const active  = patients.filter(p=>!p.isLeave);
+  const leaving = patients.filter(p=>p.isLeave);
+  const sorted  = [
+    ...[...active].sort((a,b)=>a.lv!==b.lv?a.lv-b.lv:a.arrivalTs-b.arrivalTs),
+    ...[...leaving].sort((a,b)=>a.arrivalTs-b.arrivalTs),
+  ];
+  let html='', delay=0;
+  sorted.forEach(p=>{ html+=patientRow(p,delay); delay+=30; });
+
+  tbody.innerHTML=html;
+  const activeCount=active.filter(p=>p.status!=='discharged').length;
+  document.getElementById('totalCount').textContent=
+    `รวมคนไข้ ${activeCount} ราย${leaving.length?` · กำลังออก ${leaving.length} ราย`:''}  (ทั้งหมด ${patients.length} ราย)`;
+  const d=new Date(), pad=n=>String(n).padStart(2,'0');
+  if(lu) lu.textContent=`อัปเดต ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+  if (maxRows) setTimeout(applyMaxRows, 30);
+  if (resetScroll) {
+    stopScrollCycle();
+    autoScrollPos = 0;
+    const _w = document.getElementById('tableWrap');
+    if (_w) _w.scrollTop = 0;
+  }
+}
+
+function patientRow(p, delay=0) {
+  const t   = TRIAGE[p.lv];
+  const s   = STATUS_CONFIG[p.status] || STATUS_CONFIG.triage;
+  const mins= waitMins(p);
+  const wCls= waitCls(mins,p.lv);
+  const isDis= p.status==='discharged';
+
+  const arr=new Date(p.arrivalTs), pad=n=>String(n).padStart(2,'0');
+  const tStr=`${pad(arr.getHours())}:${pad(arr.getMinutes())}:${pad(arr.getSeconds())}`;
+  const displayName = maskLastName(p.cc);
+
+  /* countdown สำหรับ leaving patients */
+  let leaveBadge = '';
+  let leaveStyle = '';
+  if (p.isLeave) {
+    const remainMs  = Math.max(0, LEAVE_GRACE_MS - p.leaveElapsed);
+    const remainMin = Math.ceil(remainMs / 60000);
+    leaveBadge = `<div style="font-size:.7rem;font-weight:800;color:#22c55e;
+                              margin-top:2px;letter-spacing:.02em">
+                    ⏳ ออกในอีก ${remainMin} นาที
+                  </div>`;
+    leaveStyle = 'opacity:.55;filter:grayscale(.4)';
+  }
+
+  return `
+    <tr class="row-l${p.lv} ${t.animCls} slide-up${isDis?' opacity-40':''}"
+        style="animation-delay:${delay}ms;cursor:default;${leaveStyle}">
+      <td class="mono font-bold whitespace-nowrap" style="padding-left:20px">${tStr}</td>
+      <td class="staff-only" style="overflow:hidden">
+        <div class="font-bold leading-tight" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
+          <span style="margin-right:6px">${genderIcon(p.cc)}</span>${displayName}
+        </div>
+        ${leaveBadge}
+      </td>
+      <td style="text-align:center">
+        <span class="pill-l${p.lv} px-4 py-1.5 rounded-full font-black inline-block whitespace-nowrap">
+          ${t.icon} โซน${t.thName}
+        </span>
+      </td>
+      <td style="text-align:center">
+        ${p.isLeave
+          ? `<span style="background:rgba(34,197,94,.20);border:1.5px solid #22c55e;color:#22c55e;
+                          padding:6px 16px;border-radius:8px;font-weight:800;
+                          display:inline-block;white-space:nowrap">✅ ${p.rawStatus||'จำหน่าย'}</span>`
+          : `<span class="st-${p.status} px-4 py-1.5 rounded-lg font-bold inline-block whitespace-nowrap">${s.label}</span>`
+        }
+      </td>
+      <td style="text-align:center;white-space:nowrap">
+        <div class="mono font-black" style="line-height:1;white-space:nowrap">⏱ ${waitStr(mins)}</div>
+      </td>
+    </tr>`;
+}
+
+/* ═══════════════════════ FETCH TIMER (background) ══════════════ */
+
+function updateCountdownDisplay() {
+  const el=document.getElementById('countdownDisplay'); if(el) el.textContent=refreshSecs===0?'–':`${cdCount}s`;
+  const rl=document.getElementById('refreshLabel');     if(rl) rl.textContent=refreshSecs===0?'ปิด':`${refreshSecs} วิ.`;
+}
+function startFetchTimer() {
+  clearInterval(fetchTimer); clearInterval(cdTimer);
+  cdCount=refreshSecs; updateCountdownDisplay();
+  if(!refreshSecs) return;
+  /* fetch ข้อมูลใหม่ทุก refreshSecs วินาที — ไม่แตะ scroll */
+  fetchTimer=setInterval(()=>{ backgroundFetch(); fetchLeaveSummary(); cdCount=refreshSecs; }, refreshSecs*1000);
+  cdTimer   =setInterval(()=>{ if(cdCount>0) cdCount--; updateCountdownDisplay(); }, 1000);
+}
+function setRefreshInterval(val) {
+  refreshSecs=val; startFetchTimer();
+  document.querySelectorAll('#refreshOpts .ropt').forEach(el=>el.classList.toggle('active',+el.dataset.val===val));
+  saveSettings();
+}
+async function manualRefresh() {
+  /* กด refresh ด้วยมือ → fetch ทันที + apply ทันที (ไม่รอ scroll ถึงล่าง) */
+  await backgroundFetch();
+  applyPendingData();
+  cdCount=refreshSecs; updateCountdownDisplay();
+}
+
+/* ═══════════════════════ SETTINGS PANEL ════════════════════════ */
+
+function openSettings()  {
+  document.getElementById('settingsPanel').classList.remove('translate-x-full');
+  document.getElementById('overlay').classList.add('open');
+  loadAndRenderFonts();
+  buildHeaderBgPicker();
+}
+function closeSettings() {
+  document.getElementById('settingsPanel').classList.add('translate-x-full');
+  document.getElementById('overlay').classList.remove('open');
+  saveSettings();
+}
+
+function buildRefreshOpts() {
+  document.getElementById('refreshOpts').innerHTML=REFRESH_OPTS.map(o=>`
+    <button class="ropt ${o.val===refreshSecs?'active':''}" data-val="${o.val}"
+            onclick="setRefreshInterval(${o.val})">${o.label}</button>`).join('');
+}
+
+function buildRowsOpts() {
+  document.getElementById('rowsOpts').innerHTML=ROWS_OPTS.map(o=>`
+    <button class="ropt ${o.val===maxRows?'active':''}" data-val="${o.val}"
+            onclick="setMaxRows(${o.val})">${o.label}</button>`).join('');
+}
+function buildScrollOpts() {
+  document.getElementById('scrollOpts').innerHTML=SCROLL_OPTS.map(o=>`
+    <button class="ropt ${o.val===SCROLL_PX_PER_S?'active':''}" data-val="${o.val}"
+            onclick="setScrollSpeed(${o.val})">${o.label}</button>`).join('');
+}
+function setScrollSpeed(val) {
+  SCROLL_PX_PER_S = val;
+  document.querySelectorAll('#scrollOpts .ropt').forEach(el=>el.classList.toggle('active',+el.dataset.val===val));
+  saveSettings();
+}
+
+function setMaxRows(val) {
+  maxRows=val;
+  document.querySelectorAll('#rowsOpts .ropt').forEach(el=>el.classList.toggle('active',+el.dataset.val===val));
+  applyMaxRows();
+  saveSettings();
+}
+
+function setMaskName(checked) {
+  maskName=checked;
+  document.getElementById('chkMaskName').checked=checked;
+  renderList();
+  saveSettings();
+}
+
+function buildColorPickers() {
+  const labels={
+    1:['L1 โซนแดง','Resuscitation'], 2:['L2 โซนชมพู','Emergency'],
+    3:['L3 โซนเหลือง','Urgent'],     4:['L4 โซนเขียว','Semi-Urgent'],
+    5:['L5 โซนขาว','Non-Urgent'],
+  };
+  document.getElementById('colorPickers').innerHTML=Object.entries(labels).map(([lv,[th,en]])=>`
+    <label class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50
+                  transition-colors cursor-pointer border border-transparent hover:border-gray-100">
+      <div class="flex items-center gap-3">
+        <div id="swatch-${lv}" class="w-10 h-10 rounded-xl shadow border border-white/60"
+             style="background:${colors[lv]}"></div>
+        <div>
+          <div class="font-bold text-sm text-gray-800">${TRIAGE[lv].icon} ${th}</div>
+          <div class="text-xs text-gray-400">${en}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="mono text-xs text-gray-400" id="hexLabel-${lv}">${colors[lv]}</span>
+        <input type="color" id="colorPicker-${lv}" value="${colors[lv]}"
+               oninput="liveColor(${lv},this.value)" />
+      </div>
+    </label>`).join('');
+}
+
+function liveColor(lv,hex) {
+  colors[lv]=hex;
+  const el=document.getElementById(`hexLabel-${lv}`); if(el) el.textContent=hex;
+  applyColors(); renderSummary(); renderList();
+}
+function liveBgColor(hex) { bgColor=hex; syncBgPicker(); applyColors(); renderList(); saveSettings(); }
+function liveRowBrightness(val) {
+  rowBrightness = parseInt(val) / 100;
+  const sl=document.getElementById('rowBrightnessSlider');
+  const lb=document.getElementById('rowBrightnessVal');
+  if(sl) sl.value=val;
+  if(lb) lb.textContent=val+'%';
+  applyColors(); renderList(); saveSettings();
+}
+function syncRowBrightnessUI() {
+  const pct = Math.round(rowBrightness * 100);
+  const sl  = document.getElementById('rowBrightnessSlider');
+  const lb  = document.getElementById('rowBrightnessVal');
+  if(sl) sl.value = Math.min(140, pct);
+  if(lb) lb.textContent = pct + '%';
+}
+function liveHeaderBgColor(hex) { headerBgColor=hex; syncHeaderBgPicker(); applyColors(); saveSettings(); }
+function syncHeaderBgPicker() {
+  const sw=document.getElementById('swatch-header'), lb=document.getElementById('hexLabel-header'),
+        pk=document.getElementById('colorPicker-header');
+  if(sw) sw.style.background=headerBgColor;
+  if(lb) lb.textContent=headerBgColor;
+  if(pk) pk.value=headerBgColor;
+}
+function buildHeaderBgPicker() {
+  syncHeaderBgPicker();
+  const HEADER_PRESETS = [
+    { hex:'#0d1b2e', label:'กลางคืน'    },
+    { hex:'#0f172a', label:'เข้ม'        },
+    { hex:'#1e3a5f', label:'น้ำเงินเข้ม' },
+    { hex:'#1a1a2e', label:'ม่วงกาแล็กซี่' },
+    { hex:'#1e293b', label:'เทาเข้ม'    },
+    { hex:'#0f2d1f', label:'เขียวเข้ม'  },
+    { hex:'#1f1f1f', label:'ดำ'          },
+    { hex:'#1e3a5f', label:'สีฟ้าเข้ม'  },
+    { hex:'#374151', label:'เทากลาง'    },
+    { hex:'#1d4ed8', label:'น้ำเงิน'    },
+    { hex:'#0f766e', label:'เขียวฟ้า'   },
+    { hex:'#f1f5f9', label:'ขาว'        },
+  ];
+  document.getElementById('headerBgPresets').innerHTML=HEADER_PRESETS.map(p=>`
+    <button class="w-8 h-8 rounded-lg border-2 border-white shadow ring-indigo-500
+                   transition-all hover:scale-110" data-hex="${p.hex}"
+            style="background:${p.hex}" title="${p.label}"
+            onclick="liveHeaderBgColor('${p.hex}')"></button>`).join('');
+}
+function syncBgPicker() {
+  const sw=document.getElementById('swatch-bg'), lb=document.getElementById('hexLabel-bg'),
+        pk=document.getElementById('colorPicker-bg');
+  if(sw) sw.style.background=bgColor; if(lb) lb.textContent=bgColor; if(pk) pk.value=bgColor;
+  document.querySelectorAll('.bg-preset').forEach(el=>el.classList.toggle('ring-2',el.dataset.hex===bgColor));
+}
+function buildBgPicker() {
+  syncBgPicker();
+  document.getElementById('bgPresets').innerHTML=BG_PRESETS.map(p=>`
+    <button class="bg-preset w-8 h-8 rounded-lg border-2 border-white shadow ring-indigo-500
+                   transition-all hover:scale-110" data-hex="${p.hex}"
+            style="background:${p.hex}" title="${p.label}"
+            onclick="liveBgColor('${p.hex}')"></button>`).join('');
+}
+function resetColors() {
+  colors={...DEFAULT_COLORS}; bgColor=DEFAULT_BG; headerBgColor=DEFAULT_HEADER_BG;
+  rowBrightness=DEFAULT_ROW_BRIGHTNESS;
+  for(let lv=1;lv<=5;lv++){
+    const pk=document.getElementById(`colorPicker-${lv}`), lb=document.getElementById(`hexLabel-${lv}`);
+    if(pk) pk.value=colors[lv]; if(lb) lb.textContent=colors[lv];
+  }
+  syncBgPicker(); syncHeaderBgPicker(); syncRowBrightnessUI(); applyColors(); renderSummary(); renderList(); saveSettings();
+}
+
+/* ═══════════════════════ TV MODE ═══════════════════════════════ */
+
+function toggleTvMode() {
+  tvMode=!tvMode;
+  document.body.classList.toggle('tv-mode',tvMode);
+  document.getElementById('btnTv').className=tvMode
+    ?'px-3 py-1.5 text-xs font-semibold rounded-lg border border-blue-400 bg-blue-600 text-white transition-colors'
+    :'px-3 py-1.5 text-xs font-semibold rounded-lg border border-white/20 bg-white/10 text-blue-200 hover:bg-white/20 transition-colors';
+}
+
+/* ═══════════════════════ PERSISTENCE ══════════════════════════ */
+
+function currentSettingsObj() {
+  return { colors, bgColor, headerBgColor, rowBrightness, refreshSecs, maskName, maxRows, headerFontSz, dataFontSz, selectedFont, scrollSpeed: SCROLL_PX_PER_S };
+}
+function applySettingsObj(s) {
+  if (!s) return;
+  if (s.colors)                    colors        = {...DEFAULT_COLORS, ...s.colors};
+  if (s.bgColor)                   bgColor       = s.bgColor;
+  if (s.headerBgColor)             headerBgColor = s.headerBgColor;
+  if (s.rowBrightness !== undefined) rowBrightness = s.rowBrightness;
+  if (s.refreshSecs   !== undefined) refreshSecs   = s.refreshSecs;
+  if (s.maskName      !== undefined) maskName      = s.maskName;
+  if (s.maxRows       !== undefined) maxRows       = s.maxRows;
+  if (s.headerFontSz  !== undefined) headerFontSz  = s.headerFontSz;
+  if (s.dataFontSz    !== undefined) dataFontSz    = s.dataFontSz;
+  if (s.selectedFont)                selectedFont    = s.selectedFont;
+  if (s.scrollSpeed !== undefined)   SCROLL_PX_PER_S = s.scrollSpeed;
+}
+function saveSettings() {
+  try { localStorage.setItem('erStatus_v4', JSON.stringify(currentSettingsObj())); } catch {}
+}
+async function loadSettings() {
+  try {
+    /* 1. ค่า default จาก server (user-defaults.json) */
+    const resp = await fetch('/api/defaults').catch(() => null);
+    if (resp && resp.ok) { const d = await resp.json(); applySettingsObj(d.defaults); }
+  } catch {}
+  try {
+    /* 2. ค่าที่ผู้ใช้ปรับเองใน browser ทับ server defaults */
+    applySettingsObj(JSON.parse(localStorage.getItem('erStatus_v4') || 'null'));
+  } catch {}
+}
+async function saveAsDefault() {
+  try {
+    const resp = await fetch('/api/defaults', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentSettingsObj())
+    });
+    const d = await resp.json();
+    if (d.ok) {
+      const btn = document.getElementById('btnSaveDefault');
+      if (btn) { btn.textContent = '✅ บันทึกแล้ว'; setTimeout(() => { btn.textContent = '💾 บันทึกเป็น Default'; }, 2000); }
+    }
+  } catch (err) {
+    const hint = err.message.includes('JSON') || err.message.includes('DOCTYPE')
+      ? '\n\n💡 กรุณา Restart Server แล้วลองใหม่' : '';
+    alert('บันทึกไม่สำเร็จ: ' + err.message + hint);
+  }
+}
+
+/* ═══════════════════════ SCROLL CYCLE ══════════════════════════
+   flow: เลื่อนลง → หยุดล่าง 2 วิ → apply ข้อมูลใหม่ → กลับบน → หยุดบน 1 วิ → เลื่อนลงใหม่
+   fetch timer ทำงานแยกอิสระ — ไม่รีเซ็ต scroll ไม่ว่ากรณีใด
+═══════════════════════════════════════════════════════════════ */
+
+let autoScrollPos    = 0;
+let scrollTickTimer  = null;   // setInterval สำหรับ pixel scrolling
+let scrollPhaseTimer = null;   // setTimeout สำหรับ pause ระหว่าง phases
+
+const SCROLL_TICK_MS   = 40;    // ~25 fps
+let   SCROLL_PX_PER_S  = 10;    // px/วินาที (ปรับได้จาก settings)
+const BOTTOM_PAUSE_MS  = 2000;  // หยุดล่างสุด 2 วิ ก่อน apply ข้อมูลใหม่
+const TOP_PAUSE_MS     = 1500;  // หยุดบนสุด 1.5 วิ ก่อนเลื่อนรอบใหม่
+
+function stopScrollCycle() {
+  if (scrollTickTimer)  { clearInterval(scrollTickTimer);  scrollTickTimer  = null; }
+  if (scrollPhaseTimer) { clearTimeout(scrollPhaseTimer);  scrollPhaseTimer = null; }
+}
+
+function startScrollCycle() {
+  stopScrollCycle();
+  autoScrollPos = 0;
+  const wrap = document.getElementById('tableWrap');
+  if (wrap) wrap.scrollTop = 0;
+  _scrollDown();
+}
+
+/* Phase 1: เลื่อนลงจากตำแหน่งปัจจุบัน */
+function _scrollDown() {
+  scrollTickTimer = setInterval(() => {
+    const el = document.getElementById('tableWrap');
+    if (!el) { stopScrollCycle(); return; }
+    const pxPerTick = (SCROLL_PX_PER_S / 1000) * SCROLL_TICK_MS; // อ่านทุก tick → เปลี่ยนความเร็วได้ real-time
+    const maxSc = el.scrollHeight - el.clientHeight;
+    if (maxSc <= 2) {
+      /* เนื้อหาพอดีจอ — หยุดรอแล้ว apply ข้อมูลใหม่ทันที */
+      clearInterval(scrollTickTimer); scrollTickTimer = null;
+      scrollPhaseTimer = setTimeout(_atBottom, BOTTOM_PAUSE_MS);
+      return;
+    }
+    autoScrollPos = Math.min(autoScrollPos + pxPerTick, maxSc);
+    el.scrollTop  = autoScrollPos;
+    if (autoScrollPos >= maxSc) {
+      clearInterval(scrollTickTimer); scrollTickTimer = null;
+      scrollPhaseTimer = setTimeout(_atBottom, BOTTOM_PAUSE_MS);
+    }
+  }, SCROLL_TICK_MS);
+}
+
+/* Phase 2: ถึงล่างสุดแล้ว — apply ข้อมูลใหม่ → กลับบน */
+function _atBottom() {
+  scrollPhaseTimer = null;
+  applyPendingData();            // อัปเดตตารางโดยไม่รีเซ็ต scroll
+  const wrap = document.getElementById('tableWrap');
+  if (wrap) { wrap.scrollTop = 0; }
+  autoScrollPos = 0;
+  scrollPhaseTimer = setTimeout(_scrollDown, TOP_PAUSE_MS);
+}
+
+/* legacy alias — ใช้ใน renderList(true) */
+function stopAutoScroll() { stopScrollCycle(); }
+
+/* ═══════════════════════ FONT FAMILY ══════════════════════════ */
+
+/* ดึง font จาก Windows ผ่าน Local Font Access API → cache ใน localStorage */
+async function loadSystemFonts() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('erStatus_fonts') || '[]');
+    if (cached.length > 0) { systemFonts = cached; return; }
+  } catch {}
+
+  if (typeof window.queryLocalFonts === 'function') {
+    try {
+      const list = await window.queryLocalFonts();
+      systemFonts = [...new Set(list.map(f => f.family))].sort();
+      localStorage.setItem('erStatus_fonts', JSON.stringify(systemFonts));
+      return;
+    } catch (e) {
+      console.warn('[Font] queryLocalFonts:', e.message);
+    }
+  }
+  systemFonts = [...FALLBACK_FONTS];
+}
+
+function applyFont() {
+  document.getElementById('fontFamilyStyle').textContent =
+    `body, #erTable tbody td {
+       font-family: '${selectedFont}', 'Noto Sans Thai', 'Segoe UI', sans-serif !important;
+     }`;
+  const lbl = document.getElementById('currentFontLabel');
+  if (lbl) lbl.textContent = selectedFont;
+}
+
+function renderFontList(filter = '') {
+  const list = document.getElementById('fontList');
+  if (!list) return;
+  const q = filter.toLowerCase();
+  const items = systemFonts.filter(f => f.toLowerCase().includes(q));
+  list.innerHTML = items.slice(0, 200).map(f => {
+    const esc = f.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const active = f === selectedFont;
+    return `<button onclick="selectFont('${esc}')" title="${f}"
+              class="w-full text-left px-3 py-2 text-sm border-b border-gray-50 last:border-0
+                     ${active ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-700 hover:bg-gray-50'}"
+              style="font-family:'${f}',sans-serif;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"
+              >${f}</button>`;
+  }).join('');
+  if (items.length > 200) {
+    list.innerHTML += `<div class="px-3 py-2 text-xs text-gray-400 text-center italic">แสดง 200 จาก ${items.length} ฟ้อนต์ — พิมพ์ค้นหาเพื่อกรอง</div>`;
+  }
+}
+
+function filterFonts(q) { renderFontList(q); }
+
+function selectFont(family) {
+  selectedFont = family;
+  applyFont();
+  saveSettings();
+  renderFontList(document.getElementById('fontSearch')?.value || '');
+}
+
+async function loadAndRenderFonts() {
+  const status = document.getElementById('fontLoadStatus');
+  if (status) status.textContent = '⏳ กำลังโหลดรายการฟ้อนต์...';
+  if (systemFonts.length === 0) await loadSystemFonts();
+  renderFontList();
+  if (status) {
+    const src = typeof window.queryLocalFonts === 'function' ? 'จาก Windows' : 'รายการสำเร็จรูป';
+    status.textContent = `พบ ${systemFonts.length} ฟ้อนต์ (${src})`;
+  }
+}
+
+async function refreshFonts() {
+  systemFonts = [];
+  localStorage.removeItem('erStatus_fonts');
+  await loadAndRenderFonts();
+}
+
+/* ═══════════════════════ INIT ══════════════════════════════════ */
+
+function render() { initialFetch(); }
+
+(async () => {
+  await loadSettings();
+  applyColors();
+  applyFont();
+  buildRefreshOpts();
+  buildScrollOpts();
+  buildRowsOpts();
+  buildBgPicker();
+  buildHeaderBgPicker();
+  buildColorPickers();
+  syncFontUI();
+  syncRowBrightnessUI();
+  document.getElementById('chkMaskName').checked = maskName;
+  if (maxRows) applyMaxRows(); else applyFontSizes();
+  window.addEventListener('resize', ()=>{ if(maxRows) applyMaxRows(); });
+  setInterval(updateClock, 1000);
+  updateClock();
+  render();
+})();
+</script>
+</body>
+</html>

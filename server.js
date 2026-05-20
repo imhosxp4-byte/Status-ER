@@ -249,14 +249,17 @@ app.post('/api/check-leave-field', async (req, res) => {
   const sql = isMySQL
     ? `SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'er_leave_status' AND COLUMN_NAME = 'leave'`
-    : `SELECT COUNT(*) AS cnt FROM information_schema.columns
-       WHERE table_schema = current_schema() AND table_name = 'er_leave_status' AND column_name = 'leave'`;
+    : `SELECT COUNT(*) AS cnt FROM pg_attribute a
+       JOIN pg_class c ON c.oid = a.attrelid
+       WHERE c.relname = 'er_leave_status' AND a.attname = 'leave' AND NOT a.attisdropped`;
 
   try {
     const rows = await runQuery(cfg, sql);
-    const cnt = parseInt(rows[0]?.cnt ?? rows[0]?.count ?? 0);
+    const cnt  = parseInt(rows[0]?.cnt ?? rows[0]?.count ?? 0);
+    console.log(`[CheckField] leave exists: ${cnt > 0}`);
     res.json({ ok: true, exists: cnt > 0 });
   } catch (err) {
+    console.error('[CheckField] ERROR —', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });

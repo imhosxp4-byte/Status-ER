@@ -16,36 +16,39 @@
 
     /* Input fields */
     .db-input {
-      width:100%; background:rgba(255,255,255,0.75);
-      border:1.5px solid rgba(100,170,220,0.45);
+      width:100%; background:#ffffff;
+      border:2px solid #a8d0e8;
       border-radius:12px; padding:12px 14px;
-      color:#0f2d4a; font-size:0.95rem;
+      color:#0c2540; font-size:0.95rem; font-weight:500;
       outline:none; transition:all .2s;
+      box-shadow:0 1px 4px rgba(30,90,150,0.08);
     }
-    .db-input:focus  { border-color:#3b82f6; background:#fff; box-shadow:0 0 0 3px rgba(59,130,246,0.2); }
-    .db-input::placeholder { color:#7fb3d0; }
+    .db-input:focus  { border-color:#2563eb; background:#fff;
+                       box-shadow:0 0 0 3px rgba(37,99,235,0.18), 0 1px 4px rgba(30,90,150,0.1); }
+    .db-input::placeholder { color:#a0c4db; }
 
     /* DB type tabs */
     .db-tab {
-      flex:1; py:3; display:flex; align-items:center; justify-content:center;
+      flex:1; display:flex; align-items:center; justify-content:center;
       gap:8px; padding:12px 16px; border-radius:12px;
       font-weight:700; font-size:.95rem; cursor:pointer;
-      border:2px solid transparent; transition:all .2s;
-      color:rgba(255,255,255,0.5);
+      border:2px solid #d0e8f5; transition:all .2s;
+      color:#6aabcc; background:#f0f8fd;
     }
-    .db-tab.active-mysql    { background:rgba(234,88,12,0.2);  border-color:#ea580c; color:#fb923c; }
-    .db-tab.active-postgres { background:rgba(59,130,246,0.2); border-color:#3b82f6; color:#60a5fa; }
-    .db-tab:not(.active-mysql):not(.active-postgres):hover { background:rgba(255,255,255,0.06); }
+    .db-tab.active-mysql    { background:#fff4ee; border-color:#ea580c; color:#c2440a; }
+    .db-tab.active-postgres { background:#eff6ff; border-color:#2563eb; color:#1d4ed8; }
+    .db-tab:not(.active-mysql):not(.active-postgres):hover { background:#e0f2fb; border-color:#7bbfd8; }
 
     /* Buttons */
     .btn-test {
-      background:rgba(99,102,241,0.15); color:#a5b4fc;
-      border:1.5px solid rgba(99,102,241,0.4);
+      background:#eff6ff; color:#1d4ed8;
+      border:2px solid #93c5fd;
       border-radius:14px; padding:14px 24px;
       font-weight:700; font-size:.95rem; cursor:pointer;
       transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px;
+      box-shadow:0 2px 8px rgba(37,99,235,0.1);
     }
-    .btn-test:hover { background:rgba(99,102,241,0.25); border-color:#6366f1; }
+    .btn-test:hover { background:#dbeafe; border-color:#2563eb; box-shadow:0 4px 12px rgba(37,99,235,0.18); }
     .btn-test:disabled { opacity:.4; cursor:not-allowed; }
 
     .btn-save {
@@ -59,8 +62,8 @@
     .btn-save:active { transform:translateY(0); }
 
     /* Input label */
-    .field-label { display:block; color:#3a6f9a; font-size:.8rem; font-weight:600;
-                   text-transform:uppercase; letter-spacing:.07em; margin-bottom:6px; }
+    .field-label { display:block; color:#1a5080; font-size:.8rem; font-weight:700;
+                   text-transform:uppercase; letter-spacing:.08em; margin-bottom:7px; }
 
     /* Password toggle */
     .pw-wrap { position:relative; }
@@ -77,57 +80,57 @@
       border-radius:10px; padding:10px 14px;
       font-size:.88rem; font-weight:600; display:flex; align-items:center; gap:8px;
     }
-    .test-ok  { background:rgba(34,197,94,.15);  border:1px solid rgba(34,197,94,.4);  color:#4ade80; }
-    .test-err { background:rgba(239,68,68,.15);  border:1px solid rgba(239,68,68,.4);  color:#f87171; }
-    .test-ing { background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.4); color:#a5b4fc; }
+    .test-ok  { background:rgba(34,197,94,.12);  border:1px solid rgba(34,197,94,.4);  color:#16a34a; }
+    .test-err { background:rgba(239,68,68,.1);   border:1px solid rgba(239,68,68,.4);  color:#dc2626; }
+    .test-ing { background:#eff6ff;              border:1px solid #93c5fd;              color:#1d4ed8; }
 
     /* Spinner */
     .spinner {
-      width:16px; height:16px; border:2px solid rgba(165,180,252,.3);
-      border-top-color:#a5b4fc; border-radius:50%;
+      width:16px; height:16px; border:2px solid rgba(37,99,235,.2);
+      border-top-color:#2563eb; border-radius:50%;
       animation:spin .7s linear infinite; display:inline-block; flex-shrink:0;
     }
 
     /* Section card */
     .section-card {
-      background:rgba(255,255,255,0.6); border:1px solid rgba(100,170,220,0.35);
+      background:#ffffff; border:1.5px solid #c2dff0;
       border-radius:18px; padding:24px;
-      box-shadow:0 2px 12px rgba(30,90,150,0.08);
+      box-shadow:0 4px 20px rgba(30,90,150,0.12), 0 1px 4px rgba(30,90,150,0.06);
     }
 
     /* Profile row */
     .prof-row {
       display:flex; align-items:center; gap:10px;
       padding:10px 12px; border-radius:12px;
-      border:1px solid rgba(255,255,255,0.08);
-      background:rgba(255,255,255,0.04); margin-bottom:8px;
+      border:1px solid #d4eaf7;
+      background:#f5fafd; margin-bottom:8px;
       transition:background .15s;
     }
-    .prof-row.active-prof { border-color:#22c55e; background:rgba(34,197,94,0.08); }
+    .prof-row.active-prof { border-color:#22c55e; background:rgba(34,197,94,0.06); }
     .prof-row:last-child  { margin-bottom:0; }
-    .prof-name  { flex:1; font-weight:700; font-size:.92rem; color:#f1f5f9; }
-    .prof-sub   { font-size:.75rem; color:#64748b; margin-top:1px; }
+    .prof-name  { flex:1; font-weight:700; font-size:.92rem; color:#1a4a70; }
+    .prof-sub   { font-size:.75rem; color:#6a95b8; margin-top:1px; }
     .prof-badge { font-size:.68rem; padding:2px 7px; border-radius:6px;
-                  background:rgba(34,197,94,0.2); color:#4ade80;
-                  border:1px solid rgba(34,197,94,0.35); font-weight:700; }
+                  background:rgba(34,197,94,0.12); color:#16a34a;
+                  border:1px solid rgba(34,197,94,0.3); font-weight:700; }
     .btn-activate {
       padding:6px 12px; border-radius:9px; font-size:.78rem; font-weight:700;
-      border:1.5px solid rgba(99,102,241,0.5); background:rgba(99,102,241,0.15);
-      color:#a5b4fc; cursor:pointer; transition:all .15s; white-space:nowrap;
+      border:1.5px solid #93c5fd; background:#eff6ff;
+      color:#1d4ed8; cursor:pointer; transition:all .15s; white-space:nowrap;
     }
-    .btn-activate:hover { background:rgba(99,102,241,0.3); }
+    .btn-activate:hover { background:#dbeafe; }
     .btn-load {
       padding:6px 12px; border-radius:9px; font-size:.78rem; font-weight:700;
-      border:1.5px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.07);
-      color:#94a3b8; cursor:pointer; transition:all .15s; white-space:nowrap;
+      border:1.5px solid #c2dff0; background:#f0f8fd;
+      color:#4a7fa5; cursor:pointer; transition:all .15s; white-space:nowrap;
     }
-    .btn-load:hover { background:rgba(255,255,255,0.12); color:#e2e8f0; }
+    .btn-load:hover { background:#e0f2fb; color:#1a5080; }
     .btn-del {
       padding:6px 10px; border-radius:9px; font-size:.78rem; font-weight:700;
-      border:1.5px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.1);
-      color:#f87171; cursor:pointer; transition:all .15s;
+      border:1.5px solid rgba(239,68,68,0.4); background:rgba(239,68,68,0.06);
+      color:#dc2626; cursor:pointer; transition:all .15s;
     }
-    .btn-del:hover { background:rgba(239,68,68,0.2); }
+    .btn-del:hover { background:rgba(239,68,68,0.12); }
   </style>
 </head>
 
@@ -179,7 +182,7 @@
 
     <!-- Connection Fields -->
     <div class="section-card mb-5">
-      <div class="text-sm font-bold text-slate-300 mb-5 flex items-center gap-2">
+      <div class="text-sm font-bold mb-5 flex items-center gap-2" style="color:#0f4c81">
         <span class="text-lg">🔌</span> ข้อมูลการเชื่อมต่อ
       </div>
 
@@ -238,19 +241,19 @@
 
     <!-- Profiles Section -->
     <div class="section-card mb-5">
-      <div class="text-sm font-bold text-slate-300 mb-4 flex items-center justify-between">
+      <div class="text-sm font-bold mb-4 flex items-center justify-between" style="color:#0f4c81">
         <div class="flex items-center gap-2"><span class="text-lg">🏥</span> โรงพยาบาลที่บันทึกไว้</div>
         <button onclick="loadProfiles()"
-                style="font-size:.78rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);
-                       background:rgba(255,255,255,.07);color:#94a3b8;cursor:pointer;">⟳ รีเฟรช</button>
+                style="font-size:.78rem;padding:4px 10px;border-radius:8px;border:1px solid #c2dff0;
+                       background:#f0f8fd;color:#4a7fa5;cursor:pointer;">⟳ รีเฟรช</button>
       </div>
       <div id="profileList">
-        <div class="text-xs text-slate-500 text-center py-3">กำลังโหลด...</div>
+        <div class="text-xs text-center py-3" style="color:#6a95b8">กำลังโหลด...</div>
       </div>
       <button onclick="saveProfile()"
               style="margin-top:14px;width:100%;padding:11px;border-radius:12px;
-                     background:rgba(99,102,241,0.15);border:1.5px solid rgba(99,102,241,0.4);
-                     color:#a5b4fc;font-weight:700;font-size:.9rem;cursor:pointer;
+                     background:#eff6ff;border:1.5px solid #93c5fd;
+                     color:#1d4ed8;font-weight:700;font-size:.9rem;cursor:pointer;
                      display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;">
         <span>💾</span> บันทึกเป็น Profile ใหม่
       </button>
@@ -258,20 +261,20 @@
 
     <!-- DB Tools Section -->
     <div class="section-card mb-5">
-      <div class="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+      <div class="text-sm font-bold mb-4 flex items-center gap-2" style="color:#0f4c81">
         <span class="text-lg">🔧</span> เครื่องมือฐานข้อมูล
       </div>
 
       <!-- leave field checker -->
       <div class="flex items-center justify-between gap-4">
         <div>
-          <div class="font-semibold text-sm text-slate-200">ฟิล <code style="background:rgba(255,255,255,.1);padding:2px 7px;border-radius:6px;font-size:.85em">leave</code> ในตาราง <code style="background:rgba(255,255,255,.1);padding:2px 7px;border-radius:6px;font-size:.85em">er_leave_status</code></div>
-          <div class="text-xs text-slate-400 mt-1" id="leaveFieldDesc">กรุณากรอกข้อมูลการเชื่อมต่อและทดสอบก่อน</div>
+          <div class="font-semibold text-sm" style="color:#1a5080">ฟิล <code style="background:#e8f4fb;padding:2px 7px;border-radius:6px;font-size:.85em;color:#1d4ed8">leave</code> ในตาราง <code style="background:#e8f4fb;padding:2px 7px;border-radius:6px;font-size:.85em;color:#1d4ed8">er_leave_status</code></div>
+          <div class="text-xs mt-1" style="color:#6a95b8" id="leaveFieldDesc">กรุณากรอกข้อมูลการเชื่อมต่อและทดสอบก่อน</div>
         </div>
         <button id="btnAddField" onclick="addLeaveField()" disabled
                 style="min-width:130px; padding:10px 18px; border-radius:12px;
                        font-weight:700; font-size:.88rem; cursor:not-allowed;
-                       border:2px solid #475569; background:rgba(71,85,105,0.2); color:#64748b;
+                       border:2px solid #c2dff0; background:#f0f8fd; color:#9db8cc;
                        display:flex; align-items:center; justify-content:center; gap:7px;
                        transition:all .2s; flex-shrink:0;">
           <span id="addFieldIcon">➕</span>
@@ -282,8 +285,8 @@
       <!-- check button -->
       <button id="btnCheckField" onclick="checkLeaveField()"
               style="margin-top:14px; width:100%; padding:10px; border-radius:11px;
-                     background:rgba(99,102,241,0.12); border:1.5px solid rgba(99,102,241,0.35);
-                     color:#a5b4fc; font-weight:600; font-size:.88rem; cursor:pointer;
+                     background:#eff6ff; border:1.5px solid #93c5fd;
+                     color:#1d4ed8; font-weight:600; font-size:.88rem; cursor:pointer;
                      display:flex; align-items:center; justify-content:center; gap:8px; transition:all .2s;">
         <span>🔎</span> ตรวจสอบฟิล leave
       </button>
@@ -305,7 +308,7 @@
     </div>
 
     <!-- Hint -->
-    <p class="text-center text-xs text-slate-500 mt-5">
+    <p class="text-center text-xs mt-5" style="color:#6a95b8">
       ข้อมูลการเชื่อมต่อจะถูกบันทึกไว้ในเครื่องนี้ (config.json)
     </p>
 
@@ -417,7 +420,7 @@
     function renderProfiles() {
       const el = document.getElementById('profileList');
       if (!_profiles.length) {
-        el.innerHTML = '<div class="text-xs text-slate-500 text-center py-3">ยังไม่มี Profile — กรอกข้อมูลแล้วกด "บันทึกเป็น Profile ใหม่"</div>';
+        el.innerHTML = '<div class="text-xs text-center py-3" style="color:#6a95b8">ยังไม่มี Profile — กรอกข้อมูลแล้วกด "บันทึกเป็น Profile ใหม่"</div>';
         return;
       }
       el.innerHTML = _profiles.map(p => {
@@ -581,9 +584,9 @@
       desc.style.color = '';
       addBtn.disabled = true;
       addBtn.style.cursor        = 'not-allowed';
-      addBtn.style.borderColor   = '#475569';
-      addBtn.style.background    = 'rgba(71,85,105,0.2)';
-      addBtn.style.color         = '#64748b';
+      addBtn.style.borderColor   = '#c2dff0';
+      addBtn.style.background    = '#f0f8fd';
+      addBtn.style.color         = '#9db8cc';
       document.getElementById('addFieldIcon').textContent  = '➕';
       document.getElementById('addFieldLabel').textContent = 'เพิ่มฟิล';
     }
@@ -609,7 +612,7 @@
         setLeaveFieldState(json.exists);
       } catch (e) {
         desc.textContent = '⚠ ตรวจสอบไม่ได้: ' + e.message;
-        desc.style.color = '#f87171';
+        desc.style.color = '#dc2626';
       } finally {
         btnCheck.disabled = false;
         btnCheck.innerHTML = '<span>🔎</span> ตรวจสอบฟิล leave อีกครั้ง';
@@ -621,12 +624,12 @@
       const desc   = document.getElementById('leaveFieldDesc');
       if (exists) {
         desc.innerHTML = '✅ <b>มีฟิล leave อยู่แล้ว</b> — ระบบพร้อมใช้งานเต็มรูปแบบ';
-        desc.style.color = '#4ade80';
+        desc.style.color = '#16a34a';
         addBtn.disabled = true;
         addBtn.style.cursor      = 'not-allowed';
-        addBtn.style.borderColor = '#475569';
-        addBtn.style.background  = 'rgba(71,85,105,0.2)';
-        addBtn.style.color       = '#64748b';
+        addBtn.style.borderColor = '#c2dff0';
+        addBtn.style.background  = '#f0f8fd';
+        addBtn.style.color       = '#9db8cc';
         document.getElementById('addFieldIcon').textContent  = '✅';
         document.getElementById('addFieldLabel').textContent = 'มีแล้ว';
       } else {

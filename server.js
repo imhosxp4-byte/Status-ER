@@ -38,11 +38,15 @@ async function runQuery(cfg, sql, params = []) {
       host: cfg.host, port: parseInt(cfg.port),
       database: cfg.database,
       user: cfg.username, password: cfg.password,
-      connectTimeout: 8000,
+      connectTimeout: 30000,
     });
-    const [rows] = await conn.query(sql, params);
-    await conn.end();
-    return rows;
+    try {
+      await conn.query('SET SESSION wait_timeout=60, interactive_timeout=60');
+      const [rows] = await conn.query(sql, params);
+      return rows;
+    } finally {
+      await conn.end().catch(() => {});
+    }
 
   } else {
     const { Client } = require('pg');
@@ -50,12 +54,18 @@ async function runQuery(cfg, sql, params = []) {
       host: cfg.host, port: parseInt(cfg.port),
       database: cfg.database,
       user: cfg.username, password: cfg.password,
-      connectionTimeoutMillis: 8000,
+      connectionTimeoutMillis: 30000,
+      query_timeout: 60000,
+      statement_timeout: 60000,
     });
     await client.connect();
-    const result = await client.query(sql, params);
-    await client.end();
-    return result.rows;
+    try {
+      await client.query('SET statement_timeout = 60000');
+      const result = await client.query(sql, params);
+      return result.rows;
+    } finally {
+      await client.end().catch(() => {});
+    }
   }
 }
 

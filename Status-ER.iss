@@ -4,7 +4,7 @@
 ; ============================================================
 
 #define MyAppName      "Status ER"
-#define MyAppVersion   "1.0.0"
+#define MyAppVersion   "1.0.5"
 #define MyAppPublisher "imhosxp4-byte"
 #define MyAppURL       "https://github.com/imhosxp4-byte/Status-ER"
 #define SrcDir         "C:\Users\MS-10\Desktop\Status-ER"
@@ -37,6 +37,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "สร้าง Desktop Shortcut"; GroupDescription: "ตั้งค่าเพิ่มเติม:"; Flags: checkedonce
+Name: "autostart";   Description: "เปิดอัตโนมัติเมื่อ Windows เริ่ม (แนะนำสำหรับเครื่อง Server)"; GroupDescription: "ตั้งค่าเพิ่มเติม:"; Flags: checkedonce
 
 ; ── ไฟล์ทั้งหมดที่ติดตั้ง ───────────────────────────────────
 [Files]
@@ -56,9 +57,9 @@ Source: "{#SrcDir}\index.html";     DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcDir}\settings.html";  DestDir: "{app}"; Flags: ignoreversion
 
 ; Server
-Source: "{#SrcDir}\server.js";          DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SrcDir}\package.json";       DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SrcDir}\package-lock.json";  DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcDir}\server.js";           DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcDir}\package.json";        DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcDir}\package-lock.json";   DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcDir}\config.example.json"; DestDir: "{app}"; Flags: ignoreversion
 
 ; DB config (pre-configured — เชื่อมต่อได้ทันทีหลังติดตั้ง)
@@ -71,35 +72,57 @@ Source: "{#SrcDir}\node_modules\*"; DestDir: "{app}\node_modules"; \
 ; ── Shortcuts ────────────────────────────────────────────────
 [Icons]
 ; Start Menu
-Name: "{group}\เปิด Status ER";   Filename: "{sys}\wscript.exe"; \
-  Parameters: """{app}\launch.vbs"""; WorkingDir: "{app}"; \
-  IconFilename: "{app}\status-er.ico"; Comment: "เปิดระบบ ER Status Dashboard"
+Name: "{group}\เปิด Status ER";         Filename: "{sys}\wscript.exe"; \
+  Parameters: """{app}\launch.vbs""";   WorkingDir: "{app}"; \
+  IconFilename: "{app}\status-er.ico";  Comment: "เปิดระบบ ER Status Dashboard"
 
-Name: "{group}\หยุด Server";       Filename: "{sys}\wscript.exe"; \
+Name: "{group}\หยุด Server";            Filename: "{sys}\wscript.exe"; \
   Parameters: """{app}\stop-server.vbs"""; WorkingDir: "{app}"; \
-  IconFilename: "{app}\status-er.ico"; Comment: "หยุด ER Status Server"
+  IconFilename: "{app}\status-er.ico";  Comment: "หยุด ER Status Server"
 
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"; \
   IconFilename: "{app}\status-er.ico"
 
-; Desktop shortcut (ติ๊กถามผู้ใช้)
-Name: "{commondesktop}\Status ER"; Filename: "{sys}\wscript.exe"; \
-  Parameters: """{app}\launch.vbs"""; WorkingDir: "{app}"; \
-  IconFilename: "{app}\status-er.ico"; Comment: "เปิดระบบ ER Status Dashboard"; \
+; Desktop shortcut
+Name: "{commondesktop}\Status ER";      Filename: "{sys}\wscript.exe"; \
+  Parameters: """{app}\launch.vbs""";   WorkingDir: "{app}"; \
+  IconFilename: "{app}\status-er.ico";  Comment: "เปิดระบบ ER Status Dashboard"; \
   Tasks: desktopicon
 
-; ── หลังติดตั้ง ──────────────────────────────────────────────
+; ── คำสั่งหลังติดตั้ง ────────────────────────────────────────
 [Run]
+; 1. ตั้ง Task Scheduler — เปิดอัตโนมัติเมื่อ Windows เริ่ม
+Filename: "schtasks.exe"; \
+  Parameters: "/create /tn ""StatusER"" /tr ""wscript.exe \""{app}\launch.vbs\"""" /sc ONSTART /rl HIGHEST /f"; \
+  Flags: runhidden waituntilterminated; Tasks: autostart
+
+; 2. เปิด Windows Firewall port 4000 (รองรับ LAN)
+Filename: "netsh.exe"; \
+  Parameters: "advfirewall firewall add rule name=""Status ER Port 4000"" dir=in action=allow protocol=TCP localport=4000"; \
+  Flags: runhidden waituntilterminated
+
+; 3. เปิดโปรแกรมทันทีหลังติดตั้ง
 Filename: "{sys}\wscript.exe"; \
   Parameters: """{app}\launch.vbs"""; \
   Description: "เปิดโปรแกรม Status ER ทันที"; \
   Flags: postinstall nowait skipifsilent
 
-; ── ก่อนถอนติดตั้ง ───────────────────────────────────────────
+; ── คำสั่งเมื่อถอนติดตั้ง ────────────────────────────────────
 [UninstallRun]
+; หยุด server
 Filename: "cmd.exe"; \
   Parameters: "/c for /f ""tokens=5"" %a in ('netstat -ano ^| findstr :4000 ^| findstr LISTENING') do taskkill /F /PID %a"; \
   Flags: runhidden; RunOnceId: "KillNode4000"
+
+; ลบ Task Scheduler
+Filename: "schtasks.exe"; \
+  Parameters: "/delete /tn ""StatusER"" /f"; \
+  Flags: runhidden; RunOnceId: "DelTask"
+
+; ลบ Firewall rule
+Filename: "netsh.exe"; \
+  Parameters: "advfirewall firewall delete rule name=""Status ER Port 4000"""; \
+  Flags: runhidden; RunOnceId: "DelFirewall"
 
 ; ── Pascal Script ────────────────────────────────────────────
 [Code]
@@ -112,6 +135,9 @@ begin
     // หยุด server เก่าก่อนติดตั้ง
     Exec('cmd.exe',
       '/c for /f "tokens=5" %a in (''netstat -ano ^| findstr :4000 ^| findstr LISTENING'') do taskkill /F /PID %a',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    // ลบ task เก่าถ้ามี
+    Exec('schtasks.exe', '/delete /tn "StatusER" /f',
       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Sleep(600);
   end;

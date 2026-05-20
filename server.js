@@ -56,7 +56,6 @@ async function runQuery(cfg, sql, params = []) {
       user: cfg.username, password: cfg.password,
       connectionTimeoutMillis: 30000,
       query_timeout: 60000,
-      statement_timeout: 60000,
     });
     await client.connect();
     try {

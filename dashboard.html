@@ -280,7 +280,7 @@
                class="w-4 h-4 rounded accent-indigo-600 cursor-pointer" />
         <div>
           <div class="font-bold text-sm text-gray-800">มาสก์นามสกุล</div>
-          <div class="text-xs text-gray-400">แสดงนามสกุลเป็น <span class="font-mono font-bold">XXXX</span></div>
+          <div class="text-xs text-gray-400">แสดงนามสกุลเฉพาะ <span class="font-mono font-bold">4 ตัวท้าย</span></div>
         </div>
       </label>
     </div>
@@ -527,7 +527,7 @@ let maskName      = false;
 let maxRows       = 0;
 let pendingData   = null;   // latest fetched data, applied when scroll reaches bottom
 const leaveTimestamps = {}; // { patientId: timestamp เมื่อ leave='Y' ครั้งแรก }
-const LEAVE_GRACE_MS  = 10 * 60 * 1000; // 10 นาที
+const LEAVE_GRACE_MS  = 5 * 60 * 1000; // 5 นาที
 let headerFontSz   = 18;
 let dataFontSz     = 26;
 let rowBrightness  = 1.15;
@@ -664,7 +664,8 @@ function maskLastName(name) {
   if (!maskName || !name || name === '—') return name;
   const parts = name.trim().split(/\s+/);
   if (parts.length < 2) return name;
-  parts[parts.length - 1] = 'XXXX';
+  const ln = parts[parts.length - 1];
+  parts[parts.length - 1] = ln.length > 4 ? '···' + ln.slice(-4) : ln.slice(-4);
   return parts.join(' ');
 }
 

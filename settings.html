@@ -93,6 +93,40 @@
       background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);
       border-radius:18px; padding:24px;
     }
+
+    /* Profile row */
+    .prof-row {
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.04); margin-bottom:8px;
+      transition:background .15s;
+    }
+    .prof-row.active-prof { border-color:#22c55e; background:rgba(34,197,94,0.08); }
+    .prof-row:last-child  { margin-bottom:0; }
+    .prof-name  { flex:1; font-weight:700; font-size:.92rem; color:#f1f5f9; }
+    .prof-sub   { font-size:.75rem; color:#64748b; margin-top:1px; }
+    .prof-badge { font-size:.68rem; padding:2px 7px; border-radius:6px;
+                  background:rgba(34,197,94,0.2); color:#4ade80;
+                  border:1px solid rgba(34,197,94,0.35); font-weight:700; }
+    .btn-activate {
+      padding:6px 12px; border-radius:9px; font-size:.78rem; font-weight:700;
+      border:1.5px solid rgba(99,102,241,0.5); background:rgba(99,102,241,0.15);
+      color:#a5b4fc; cursor:pointer; transition:all .15s; white-space:nowrap;
+    }
+    .btn-activate:hover { background:rgba(99,102,241,0.3); }
+    .btn-load {
+      padding:6px 12px; border-radius:9px; font-size:.78rem; font-weight:700;
+      border:1.5px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.07);
+      color:#94a3b8; cursor:pointer; transition:all .15s; white-space:nowrap;
+    }
+    .btn-load:hover { background:rgba(255,255,255,0.12); color:#e2e8f0; }
+    .btn-del {
+      padding:6px 10px; border-radius:9px; font-size:.78rem; font-weight:700;
+      border:1.5px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.1);
+      color:#f87171; cursor:pointer; transition:all .15s;
+    }
+    .btn-del:hover { background:rgba(239,68,68,0.2); }
   </style>
 </head>
 
@@ -149,6 +183,13 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
+        <!-- Hospital Name -->
+        <div class="sm:col-span-2">
+          <label class="field-label">ชื่อโรงพยาบาล / Profile</label>
+          <input id="fName" type="text" class="db-input"
+                 placeholder="เช่น รพ.ชุมชนบ้านนา หรือ Hospital A" autocomplete="off" />
+        </div>
+
         <!-- IP Server -->
         <div class="sm:col-span-2">
           <label class="field-label">IP Server / Hostname</label>
@@ -192,6 +233,26 @@
 
     <!-- Test Result (hidden by default) -->
     <div id="testResult" class="hidden mb-4"></div>
+
+    <!-- Profiles Section -->
+    <div class="section-card mb-5">
+      <div class="text-sm font-bold text-slate-300 mb-4 flex items-center justify-between">
+        <div class="flex items-center gap-2"><span class="text-lg">🏥</span> โรงพยาบาลที่บันทึกไว้</div>
+        <button onclick="loadProfiles()"
+                style="font-size:.78rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);
+                       background:rgba(255,255,255,.07);color:#94a3b8;cursor:pointer;">⟳ รีเฟรช</button>
+      </div>
+      <div id="profileList">
+        <div class="text-xs text-slate-500 text-center py-3">กำลังโหลด...</div>
+      </div>
+      <button onclick="saveProfile()"
+              style="margin-top:14px;width:100%;padding:11px;border-radius:12px;
+                     background:rgba(99,102,241,0.15);border:1.5px solid rgba(99,102,241,0.4);
+                     color:#a5b4fc;font-weight:700;font-size:.9rem;cursor:pointer;
+                     display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;">
+        <span>💾</span> บันทึกเป็น Profile ใหม่
+      </button>
+    </div>
 
     <!-- DB Tools Section -->
     <div class="section-card mb-5">
@@ -255,6 +316,7 @@
     function applyConfig(cfg) {
       if (!cfg) return;
       if (cfg.dbType) selectDbType(cfg.dbType, true);
+      setVal('fName',     cfg.name     || '');
       setVal('fHost',     cfg.host     || '');
       setVal('fPort',     cfg.port     || (cfg.dbType === 'postgres' ? '5432' : '3306'));
       setVal('fDatabase', cfg.database || '');
@@ -262,16 +324,18 @@
       setVal('fPass',     cfg.password || '');
     }
 
-    /* ── Load saved settings: server config.json first, then localStorage ── */
+    /* ── Load saved settings + profiles ── */
     (async function init() {
       try {
         const resp = await fetch(`${API_BASE}/api/config`);
         if (resp.ok) {
           const d = await resp.json();
-          if (d.ok && d.config) { applyConfig(d.config); return; }
+          if (d.ok && d.config) { applyConfig(d.config); }
         }
-      } catch {}
-      applyConfig(JSON.parse(localStorage.getItem('erStatus_db') || 'null'));
+      } catch {
+        applyConfig(JSON.parse(localStorage.getItem('erStatus_db') || 'null'));
+      }
+      loadProfiles();
     })();
 
     function setVal(id, v) { document.getElementById(id).value = v; }
@@ -323,6 +387,7 @@
 
     function buildCfg() {
       return {
+        name:     getVal('fName'),
         dbType:   dbType,
         host:     getVal('fHost'),
         port:     getVal('fPort'),
@@ -331,6 +396,85 @@
         password: getVal('fPass'),
         savedAt:  new Date().toISOString(),
       };
+    }
+
+    /* ── Profiles ── */
+    let _profiles = [], _activeHost = null, _activeDb = null;
+
+    async function loadProfiles() {
+      try {
+        const r = await fetch(`${API_BASE}/api/profiles`);
+        const d = await r.json();
+        _profiles   = d.profiles  || [];
+        _activeHost = d.activeHost || null;
+        _activeDb   = d.activeDb  || null;
+        renderProfiles();
+      } catch { renderProfiles(); }
+    }
+
+    function renderProfiles() {
+      const el = document.getElementById('profileList');
+      if (!_profiles.length) {
+        el.innerHTML = '<div class="text-xs text-slate-500 text-center py-3">ยังไม่มี Profile — กรอกข้อมูลแล้วกด "บันทึกเป็น Profile ใหม่"</div>';
+        return;
+      }
+      el.innerHTML = _profiles.map(p => {
+        const isActive = p.host === _activeHost && p.database === _activeDb;
+        return `<div class="prof-row ${isActive ? 'active-prof' : ''}">
+          <div style="flex:1;min-width:0">
+            <div class="prof-name">${p.name || '(ไม่มีชื่อ)'}
+              ${isActive ? '<span class="prof-badge" style="margin-left:6px">ใช้งานอยู่</span>' : ''}
+            </div>
+            <div class="prof-sub">${p.dbType?.toUpperCase()} · ${p.host}:${p.port} · ${p.database}</div>
+          </div>
+          <button class="btn-load" onclick="loadProfile('${p.id}')">โหลด</button>
+          ${!isActive ? `<button class="btn-activate" onclick="activateProfile('${p.id}','${p.name}')">เปิดใช้</button>` : ''}
+          <button class="btn-del" onclick="deleteProfile('${p.id}','${p.name}')">🗑</button>
+        </div>`;
+      }).join('');
+    }
+
+    function loadProfile(id) {
+      const p = _profiles.find(x => x.id === id);
+      if (p) { applyConfig(p); clearTestResult(); resetLeaveFieldUI(); }
+    }
+
+    async function activateProfile(id, name) {
+      if (!confirm(`เปิดใช้ "${name}" เป็น รพ. ปัจจุบัน?`)) return;
+      showTestResult('ing', '<span class="spinner"></span> กำลังเปลี่ยน...');
+      try {
+        const r = await fetch(`${API_BASE}/api/profiles/${id}/activate`, { method: 'POST' });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error);
+        showTestResult('ok', `✅ เปิดใช้ "${name}" แล้ว — กำลังเข้าสู่ระบบ...`);
+        await loadProfiles();
+        setTimeout(() => location.href = 'dashboard.html', 900);
+      } catch(e) { showTestResult('err', '❌ ' + e.message); }
+    }
+
+    async function deleteProfile(id, name) {
+      if (!confirm(`ลบ "${name}" ออกจากรายการ?`)) return;
+      try {
+        await fetch(`${API_BASE}/api/profiles/${id}`, { method: 'DELETE' });
+        await loadProfiles();
+      } catch(e) { alert('ลบไม่ได้: ' + e.message); }
+    }
+
+    async function saveProfile() {
+      const cfg = buildCfg();
+      if (!cfg.host) { showTestResult('err', '⚠ กรุณากรอก IP Server ก่อน'); return; }
+      if (!cfg.name) cfg.name = `${cfg.dbType?.toUpperCase()} @ ${cfg.host}`;
+      showTestResult('ing', '<span class="spinner"></span> กำลังบันทึก profile...');
+      try {
+        const r = await fetch(`${API_BASE}/api/profiles`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg),
+        });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error);
+        showTestResult('ok', `✅ บันทึก Profile "${cfg.name}" สำเร็จ`);
+        await loadProfiles();
+      } catch(e) { showTestResult('err', '❌ ' + e.message); }
     }
 
     /* ── Test connection — calls real backend API ── */

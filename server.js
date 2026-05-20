@@ -9,10 +9,11 @@ const fs      = require('fs');
 const path    = require('path');
 const cors    = require('cors');
 
-const app           = express();
-const PORT          = 4000;
-const CONFIG_FILE   = path.join(__dirname, 'config.json');
-const DEFAULTS_FILE = path.join(__dirname, 'user-defaults.json');
+const app            = express();
+const PORT           = 4000;
+const CONFIG_FILE    = path.join(__dirname, 'config.json');
+const DEFAULTS_FILE  = path.join(__dirname, 'user-defaults.json');
+const PROFILES_FILE  = path.join(__dirname, 'profiles.json');
 
 app.use(cors());
 app.use(express.json());
@@ -25,6 +26,15 @@ app.use(express.static(__dirname)); /* serve HTML files */
 function loadConfig() {
   try   { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); }
   catch { return null; }
+}
+
+function loadProfiles() {
+  try   { return JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf8')); }
+  catch { return []; }
+}
+
+function saveProfiles(profiles) {
+  fs.writeFileSync(PROFILES_FILE, JSON.stringify(profiles, null, 2));
 }
 
 /**
@@ -279,6 +289,56 @@ app.post('/api/add-leave-field', async (req, res) => {
     console.error('[AddField] ERROR —', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
+});
+
+/* ── GET /api/profiles — รายการ profiles ทั้งหมด ── */
+app.get('/api/profiles', (req, res) => {
+  const profiles = loadProfiles();
+  const cfg      = loadConfig();
+  res.json({ ok: true, profiles, activeHost: cfg?.host || null, activeDb: cfg?.database || null });
+});
+
+/* ── POST /api/profiles — บันทึก profile ใหม่หรืออัปเดต ── */
+app.post('/api/profiles', (req, res) => {
+  const { id, name, ...dbCfg } = req.body;
+  if (!name || !dbCfg.host) return res.status(400).json({ ok: false, error: 'ต้องระบุชื่อและ host' });
+
+  const profiles = loadProfiles();
+  const pid      = id || `prof_${Date.now()}`;
+  const idx      = profiles.findIndex(p => p.id === pid);
+  const entry    = { id: pid, name, savedAt: new Date().toISOString(), ...dbCfg };
+
+  if (idx >= 0) profiles[idx] = entry;
+  else          profiles.push(entry);
+
+  saveProfiles(profiles);
+  console.log(`[Profiles] Saved — "${name}" (${dbCfg.dbType} @ ${dbCfg.host}:${dbCfg.port})`);
+  res.json({ ok: true, id: pid });
+});
+
+/* ── POST /api/profiles/:id/activate — เปิดใช้ profile นี้ (copy → config.json) ── */
+app.post('/api/profiles/:id/activate', (req, res) => {
+  const profiles = loadProfiles();
+  const prof     = profiles.find(p => p.id === req.params.id);
+  if (!prof) return res.status(404).json({ ok: false, error: 'ไม่พบ profile' });
+
+  const { id, name, ...cfg } = prof;
+  cfg.savedAt = new Date().toISOString();
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
+  console.log(`[Profiles] Activated — "${name}" (${cfg.dbType} @ ${cfg.host}:${cfg.port})`);
+  res.json({ ok: true, name });
+});
+
+/* ── DELETE /api/profiles/:id — ลบ profile ── */
+app.delete('/api/profiles/:id', (req, res) => {
+  const profiles = loadProfiles();
+  const idx      = profiles.findIndex(p => p.id === req.params.id);
+  if (idx < 0) return res.status(404).json({ ok: false, error: 'ไม่พบ profile' });
+
+  const [removed] = profiles.splice(idx, 1);
+  saveProfiles(profiles);
+  console.log(`[Profiles] Deleted — "${removed.name}"`);
+  res.json({ ok: true });
 });
 
 /* ══════════════════════════════════════════════

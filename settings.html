@@ -355,13 +355,16 @@
           showTestResult('ok',
             `✅ เชื่อมต่อสำเร็จ — ${dbType.toUpperCase()} @ ${getVal('fHost')}:${getVal('fPort')} / ${getVal('fDatabase')}`
           );
+          checkLeaveField();   /* ตรวจสอบฟิล leave อัตโนมัติหลังเชื่อมต่อสำเร็จ */
         } else {
           showTestResult('err', `❌ ${json.message || 'เชื่อมต่อไม่สำเร็จ'}`);
+          resetLeaveFieldUI();
         }
       } catch {
         showTestResult('err',
           '❌ ไม่พบ Server — กรุณาเปิด <b>start.bat</b> ก่อน แล้วลองใหม่'
         );
+        resetLeaveFieldUI();
       } finally {
         btn.disabled = false;
         document.getElementById('testIcon').textContent = '🔍';
@@ -413,24 +416,42 @@
       document.getElementById('testResult').classList.add('hidden');
     }
 
+    /* ── Reset leave field UI (before connection known) ── */
+    function resetLeaveFieldUI() {
+      const desc   = document.getElementById('leaveFieldDesc');
+      const addBtn = document.getElementById('btnAddField');
+      desc.textContent = 'กรุณากรอกข้อมูลการเชื่อมต่อและทดสอบก่อน';
+      desc.style.color = '';
+      addBtn.disabled = true;
+      addBtn.style.cursor        = 'not-allowed';
+      addBtn.style.borderColor   = '#475569';
+      addBtn.style.background    = 'rgba(71,85,105,0.2)';
+      addBtn.style.color         = '#64748b';
+      document.getElementById('addFieldIcon').textContent  = '➕';
+      document.getElementById('addFieldLabel').textContent = 'เพิ่มฟิล';
+    }
+
     /* ── Check leave field ── */
     async function checkLeaveField() {
-      const btn  = document.getElementById('btnCheckField');
-      const desc = document.getElementById('leaveFieldDesc');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> กำลังตรวจสอบ...';
+      const btnCheck = document.getElementById('btnCheckField');
+      const desc     = document.getElementById('leaveFieldDesc');
+      btnCheck.disabled = true;
+      btnCheck.innerHTML = '<span class="spinner"></span> กำลังตรวจสอบ...';
       desc.textContent = 'กำลังตรวจสอบ...';
+      desc.style.color = '';
 
       try {
         const resp = await fetch(`${API_BASE}/api/check-leave-field`);
+        if (!resp.ok) throw new Error(`Server ตอบ ${resp.status}`);
         const json = await resp.json();
         if (!json.ok) throw new Error(json.error || 'ตรวจสอบไม่ได้');
         setLeaveFieldState(json.exists);
       } catch (e) {
-        desc.textContent = '⚠ ' + e.message;
+        desc.textContent = '⚠ ตรวจสอบไม่ได้: ' + e.message;
+        desc.style.color = '#f87171';
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<span>🔎</span> ตรวจสอบฟิล leave';
+        btnCheck.disabled = false;
+        btnCheck.innerHTML = '<span>🔎</span> ตรวจสอบฟิล leave อีกครั้ง';
       }
     }
 
@@ -438,23 +459,23 @@
       const addBtn = document.getElementById('btnAddField');
       const desc   = document.getElementById('leaveFieldDesc');
       if (exists) {
-        desc.textContent = '✅ มีฟิล leave แล้ว — ระบบพร้อมใช้งาน';
+        desc.innerHTML = '✅ <b>มีฟิล leave อยู่แล้ว</b> — ระบบพร้อมใช้งานเต็มรูปแบบ';
         desc.style.color = '#4ade80';
         addBtn.disabled = true;
-        addBtn.style.cursor        = 'not-allowed';
-        addBtn.style.borderColor   = '#475569';
-        addBtn.style.background    = 'rgba(71,85,105,0.2)';
-        addBtn.style.color         = '#64748b';
+        addBtn.style.cursor      = 'not-allowed';
+        addBtn.style.borderColor = '#475569';
+        addBtn.style.background  = 'rgba(71,85,105,0.2)';
+        addBtn.style.color       = '#64748b';
         document.getElementById('addFieldIcon').textContent  = '✅';
         document.getElementById('addFieldLabel').textContent = 'มีแล้ว';
       } else {
-        desc.textContent = '⚠ ยังไม่มีฟิล leave — กดปุ่มเพื่อเพิ่ม';
+        desc.innerHTML = '⚠ <b>ยังไม่มีฟิล leave</b> — กดปุ่มด้านขวาเพื่อเพิ่ม';
         desc.style.color = '#fb923c';
         addBtn.disabled = false;
-        addBtn.style.cursor        = 'pointer';
-        addBtn.style.borderColor   = '#ea580c';
-        addBtn.style.background    = 'rgba(234,88,12,0.2)';
-        addBtn.style.color         = '#fb923c';
+        addBtn.style.cursor      = 'pointer';
+        addBtn.style.borderColor = '#ea580c';
+        addBtn.style.background  = 'rgba(234,88,12,0.2)';
+        addBtn.style.color       = '#fb923c';
         document.getElementById('addFieldIcon').textContent  = '➕';
         document.getElementById('addFieldLabel').textContent = 'เพิ่มฟิล';
       }

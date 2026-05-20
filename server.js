@@ -239,10 +239,11 @@ app.get('/api/er-leave-summary', async (req, res) => {
   }
 });
 
-/* ── GET /api/check-leave-field — ตรวจสอบว่ามีฟิล leave ใน er_leave_status ── */
-app.get('/api/check-leave-field', async (req, res) => {
-  const cfg = loadConfig();
-  if (!cfg) return res.status(503).json({ ok: false, error: 'ยังไม่ได้ตั้งค่าฐานข้อมูล' });
+/* ── POST /api/check-leave-field — ตรวจสอบว่ามีฟิล leave ใน er_leave_status ── */
+/* รับ cfg จาก request body (ค่าฟอร์มปัจจุบัน ไม่ใช่ config.json ที่บันทึกไว้) */
+app.post('/api/check-leave-field', async (req, res) => {
+  const cfg = req.body;
+  if (!cfg || !cfg.host) return res.status(400).json({ ok: false, error: 'ไม่มีข้อมูลการเชื่อมต่อ' });
 
   const isMySQL = cfg.dbType === 'mysql';
   const sql = isMySQL
@@ -261,9 +262,10 @@ app.get('/api/check-leave-field', async (req, res) => {
 });
 
 /* ── POST /api/add-leave-field — เพิ่มฟิล leave CHAR(1) ใน er_leave_status ── */
+/* รับ cfg จาก request body */
 app.post('/api/add-leave-field', async (req, res) => {
-  const cfg = loadConfig();
-  if (!cfg) return res.status(503).json({ ok: false, error: 'ยังไม่ได้ตั้งค่าฐานข้อมูล' });
+  const cfg = req.body;
+  if (!cfg || !cfg.host) return res.status(400).json({ ok: false, error: 'ไม่มีข้อมูลการเชื่อมต่อ' });
 
   const sql = `ALTER TABLE er_leave_status ADD COLUMN leave CHAR(1) DEFAULT NULL`;
   try {

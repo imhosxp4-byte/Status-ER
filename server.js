@@ -9,11 +9,27 @@ const fs      = require('fs');
 const path    = require('path');
 const cors    = require('cors');
 
-const app            = express();
-const PORT           = 4000;
-const CONFIG_FILE    = path.join(__dirname, 'config.json');
-const DEFAULTS_FILE  = path.join(__dirname, 'user-defaults.json');
-const PROFILES_FILE  = path.join(__dirname, 'profiles.json');
+const app  = express();
+const PORT = 4000;
+
+/* เก็บ config/data ใน ProgramData (เขียนได้โดยไม่ต้องใช้ Admin)
+   fallback เป็น __dirname สำหรับ dev mode */
+const DATA_DIR = process.env.PROGRAMDATA
+  ? path.join(process.env.PROGRAMDATA, 'StatusER')
+  : __dirname;
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+const CONFIG_FILE   = path.join(DATA_DIR, 'config.json');
+const DEFAULTS_FILE = path.join(DATA_DIR, 'user-defaults.json');
+const PROFILES_FILE = path.join(DATA_DIR, 'profiles.json');
+
+/* migrate config.json เก่าจาก __dirname → DATA_DIR ถ้ายังไม่มีใน DATA_DIR */
+(function migrateConfig() {
+  const oldCfg = path.join(__dirname, 'config.json');
+  if (!fs.existsSync(CONFIG_FILE) && fs.existsSync(oldCfg)) {
+    try { fs.copyFileSync(oldCfg, CONFIG_FILE); } catch {}
+  }
+})();
 
 app.use(cors());
 app.use(express.json());

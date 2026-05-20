@@ -20,7 +20,16 @@ If Len(Trim(strOut)) = 0 Then
 End If
 
 ' ── เปิด browser ──────────────────────────────────────────────
-If oFSO.FileExists(strDir & "\config.json") Then
+' ตรวจ config ใน ProgramData ก่อน (ติดตั้งแล้ว) แล้วจึงตรวจ app dir (dev)
+Dim strDataDir, strCfgPath
+strDataDir = oShell.ExpandEnvironmentStrings("%PROGRAMDATA%") & "\StatusER"
+strCfgPath = strDataDir & "\config.json"
+
+If Not oFSO.FileExists(strCfgPath) Then
+  strCfgPath = strDir & "\config.json"
+End If
+
+If oFSO.FileExists(strCfgPath) Then
   oShell.Run "http://localhost:4000/dashboard.html"
 Else
   oShell.Run "http://localhost:4000/settings.html"

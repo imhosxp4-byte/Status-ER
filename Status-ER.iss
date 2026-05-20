@@ -4,7 +4,7 @@
 ; ============================================================
 
 #define MyAppName      "Status ER"
-#define MyAppVersion   "1.2.2"
+#define MyAppVersion   "1.2.3"
 #define MyAppPublisher "imhosxp4-byte"
 #define MyAppURL       "https://github.com/imhosxp4-byte/Status-ER"
 #define SrcDir         "C:\Users\MS-10\Desktop\Status-ER"
@@ -38,6 +38,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "สร้าง Desktop Shortcut"; GroupDescription: "ตั้งค่าเพิ่มเติม:"; Flags: checkedonce
 Name: "autostart";   Description: "เปิดอัตโนมัติเมื่อ Windows เริ่ม (แนะนำสำหรับเครื่อง Server)"; GroupDescription: "ตั้งค่าเพิ่มเติม:"; Flags: checkedonce
+
+; ── สร้างโฟลเดอร์ ProgramData\StatusER ให้ user เขียนได้ ──────
+[Dirs]
+Name: "{commonappdata}\StatusER"; Permissions: users-modify
 
 ; ── ไฟล์ทั้งหมดที่ติดตั้ง ───────────────────────────────────
 [Files]

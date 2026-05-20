@@ -4,7 +4,7 @@
 ; ============================================================
 
 #define MyAppName      "Status ER"
-#define MyAppVersion   "1.2.0"
+#define MyAppVersion   "1.2.1"
 #define MyAppPublisher "imhosxp4-byte"
 #define MyAppURL       "https://github.com/imhosxp4-byte/Status-ER"
 #define SrcDir         "C:\Users\MS-10\Desktop\Status-ER"
@@ -62,8 +62,8 @@ Source: "{#SrcDir}\package.json";        DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcDir}\package-lock.json";   DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcDir}\config.example.json"; DestDir: "{app}"; Flags: ignoreversion
 
-; DB config (pre-configured — เชื่อมต่อได้ทันทีหลังติดตั้ง)
-Source: "{#SrcDir}\config.json"; DestDir: "{app}"; Flags: ignoreversion
+; หมายเหตุ: ไม่รวม config.json — เครื่องใหม่จะเปิดหน้า Settings อัตโนมัติ
+; (ถ้าเคยติดตั้งแล้ว config.json เดิมจะยังคงอยู่ ไม่ถูกลบ)
 
 ; node_modules (pre-installed — offline ใช้ได้ทันที)
 Source: "{#SrcDir}\node_modules\*"; DestDir: "{app}\node_modules"; \

@@ -665,7 +665,7 @@ function maskLastName(name) {
   const parts = name.trim().split(/\s+/);
   if (parts.length < 2) return name;
   const ln = parts[parts.length - 1];
-  parts[parts.length - 1] = ln.length > 4 ? ln.slice(0, -4) + '····' : '····';
+  parts[parts.length - 1] = ln.length > 4 ? ln.slice(0, -4) + 'XXXX' : 'XXXX';
   return parts.join(' ');
 }
 

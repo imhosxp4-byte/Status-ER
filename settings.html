@@ -523,25 +523,36 @@
 
       showTestResult('ing', '<span class="spinner"></span> กำลังบันทึก...');
 
+      /* 1. POST to backend — must succeed */
+      let saved = false;
       try {
-        /* 1. POST to backend so server.js writes config.json */
         const resp = await fetch(`${API_BASE}/api/config`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify(cfg),
         });
         const json = await resp.json();
-        if (!json.ok) throw new Error(json.error);
+        if (!json.ok) throw new Error(json.error || 'server ตอบไม่ ok');
+        saved = true;
       } catch (e) {
-        /* If server not running yet, still save locally */
-        console.warn('Server unreachable, saving to localStorage only:', e.message);
+        showTestResult('err', `❌ บันทึกไม่สำเร็จ: ${e.message}<br><small>กรุณาตรวจสอบว่า Server กำลังทำงาน</small>`);
+        return; /* หยุด — ไม่ redirect */
       }
 
-      /* 2. Always save to localStorage for landing page */
-      localStorage.setItem('erStatus_db', JSON.stringify(cfg));
+      /* 2. Verify — re-read config from server to confirm write */
+      try {
+        const vResp = await fetch(`${API_BASE}/api/config`);
+        const vJson = await vResp.json();
+        if (!vJson.ok || vJson.config?.host !== cfg.host || vJson.config?.database !== cfg.database) {
+          showTestResult('err', '❌ บันทึกแล้วแต่ค่าไม่ตรง — กรุณาลองใหม่');
+          return;
+        }
+      } catch { /* verify ไม่ได้ แต่ save ผ่านแล้ว ไปต่อ */ }
 
-      showTestResult('ok', '✅ บันทึกสำเร็จ — กำลังเข้าสู่ระบบ...');
-      setTimeout(() => location.href = 'dashboard.html', 800);
+      /* 3. Save to localStorage + redirect */
+      localStorage.setItem('erStatus_db', JSON.stringify(cfg));
+      showTestResult('ok', `✅ บันทึกสำเร็จ — ${cfg.dbType?.toUpperCase()} @ ${cfg.host}:${cfg.port}<br><small>กำลังเข้าสู่ระบบ...</small>`);
+      setTimeout(() => location.href = 'dashboard.html', 1000);
     }
 
     /* ── UI helpers ── */

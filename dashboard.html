@@ -579,6 +579,19 @@ let lastErrType     = null;
 let autoRetryActive = false;
 const API_BASE      = window.location.origin;
 
+/* ── แสดง config ปัจจุบันใน error box ── */
+async function showCurrentCfgInError() {
+  const el = document.getElementById('dbErrCfgInfo');
+  if (!el) return;
+  try {
+    const r = await fetch(`${API_BASE}/api/status`);
+    const d = await r.json();
+    if (d.configured && d.host) {
+      el.innerHTML = `กำลังพยายามเชื่อมต่อ: <span style="color:#fbbf24;font-weight:700">${d.dbType?.toUpperCase()} @ ${d.host}</span> — ถ้าไม่ใช่ DB ที่ต้องการ กรุณาแก้ไขการตั้งค่า`;
+    }
+  } catch {}
+}
+
 /* ── Logout ── */
 function doLogout() {
   if (!confirm('ออกจากระบบ และกลับไปหน้าตั้งค่าการเชื่อมต่อ?')) return;
@@ -756,9 +769,10 @@ async function initialFetch() {
     if (lastErrType==='network') autoRetryLoop(); else stopAutoRetry();
   }
   renderSummary();
-  renderList(true);       // reset scroll to top
-  fetchLeaveSummary();    // สรุปสถานะออกจาก ER (independent, no scroll dependency)
-  startScrollCycle();     // start continuous scroll
+  renderList(true);
+  fetchLeaveSummary();
+  startScrollCycle();
+  if (lastErrType === 'dberror') showCurrentCfgInError();
   startFetchTimer();      // start background fetch
 }
 
@@ -1167,12 +1181,13 @@ function renderList(resetScroll = true) {
           ⚙ ไปตั้งค่าการเชื่อมต่อ</a></td></tr>`;
     } else if (lastErrType==='dberror') {
       msg=`<tr><td colspan="5" class="py-16 text-center">
-        <div class="text-5xl mb-4">🗄️</div>
-        <div class="text-xl font-black text-red-400 mb-2">เชื่อมต่อฐานข้อมูลไม่สำเร็จ</div>
-        <div class="mono text-xs text-red-300/60 mb-6 max-w-md mx-auto break-all px-4">${lastError}</div>
+        <div class="text-5xl mb-3">🗄️</div>
+        <div class="text-xl font-black text-red-400 mb-1">เชื่อมต่อฐานข้อมูลไม่สำเร็จ</div>
+        <div class="mono text-xs text-red-300/60 mb-2 max-w-md mx-auto break-all px-4">${lastError}</div>
+        <div id="dbErrCfgInfo" class="text-xs text-slate-500 mb-5"></div>
         <a href="${API_BASE}/settings.html" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl
            font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-500 border border-indigo-400">
-          ⚙ ตรวจสอบการตั้งค่า</a></td></tr>`;
+          ⚙ แก้ไขการตั้งค่า DB</a></td></tr>`;
     } else if (lastErrType==='network') {
       msg=`<tr><td colspan="5" class="py-16 text-center">
         <div class="text-6xl mb-4">🔌</div>

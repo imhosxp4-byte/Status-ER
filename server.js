@@ -85,6 +85,13 @@ app.post('/api/defaults', (req, res) => {
   }
 });
 
+/* ── GET  /api/config — return current DB config for settings pre-fill ── */
+app.get('/api/config', (req, res) => {
+  const cfg = loadConfig();
+  if (!cfg) return res.json({ ok: false });
+  res.json({ ok: true, config: cfg });
+});
+
 /* ── GET  /api/status — server health check ── */
 app.get('/api/status', (req, res) => {
   const cfg = loadConfig();

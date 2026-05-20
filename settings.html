@@ -210,7 +210,7 @@
 
     <!-- Hint -->
     <p class="text-center text-xs text-slate-500 mt-5">
-      ข้อมูลการเชื่อมต่อจะถูกบันทึกในเบราว์เซอร์ (localStorage) เท่านั้น
+      ข้อมูลการเชื่อมต่อจะถูกบันทึกไว้ในเครื่องนี้ (config.json)
     </p>
 
   </main>
@@ -218,9 +218,8 @@
   <script>
     let dbType = 'mysql';
 
-    /* ── Load saved settings ── */
-    (function init() {
-      const cfg = JSON.parse(localStorage.getItem('erStatus_db') || 'null');
+    /* ── Apply config object to form ── */
+    function applyConfig(cfg) {
       if (!cfg) return;
       if (cfg.dbType) selectDbType(cfg.dbType, true);
       setVal('fHost',     cfg.host     || '');
@@ -228,6 +227,18 @@
       setVal('fDatabase', cfg.database || '');
       setVal('fUser',     cfg.username || '');
       setVal('fPass',     cfg.password || '');
+    }
+
+    /* ── Load saved settings: server config.json first, then localStorage ── */
+    (async function init() {
+      try {
+        const resp = await fetch(`${API_BASE}/api/config`);
+        if (resp.ok) {
+          const d = await resp.json();
+          if (d.ok && d.config) { applyConfig(d.config); return; }
+        }
+      } catch {}
+      applyConfig(JSON.parse(localStorage.getItem('erStatus_db') || 'null'));
     })();
 
     function setVal(id, v) { document.getElementById(id).value = v; }

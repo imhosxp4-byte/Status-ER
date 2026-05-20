@@ -1,5 +1,8 @@
 node_modules/
 config.json
 user-defaults.json
+profiles.json
 server.log
 *.log
+dist/
+*.exe
